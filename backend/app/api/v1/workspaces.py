@@ -27,10 +27,7 @@ def list_workspaces(
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     workspaces_with_roles = workspace_service.list_user_workspaces(db, current_user.id)
-    return [
-        {"workspace": ws, "role": role}
-        for ws, role in workspaces_with_roles
-    ]
+    return [{"workspace": ws, "role": role} for ws, role in workspaces_with_roles]
 
 
 @router.post("", response_model=WorkspaceRead)

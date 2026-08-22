@@ -7,7 +7,9 @@ from app.models.child import ChildRelationship
 from app.models.union import FamilyUnion
 
 
-def get_descendants_ids(db: Session, workspace_id: uuid.UUID, root_person_id: uuid.UUID) -> set[uuid.UUID]:
+def get_descendants_ids(
+    db: Session, workspace_id: uuid.UUID, root_person_id: uuid.UUID
+) -> set[uuid.UUID]:
     descendants: set[uuid.UUID] = set()
     queue = [root_person_id]
 
@@ -38,7 +40,9 @@ def get_descendants_ids(db: Session, workspace_id: uuid.UUID, root_person_id: uu
     return descendants
 
 
-def validate_no_cycle(db: Session, workspace_id: uuid.UUID, union_id: uuid.UUID, child_id: uuid.UUID) -> None:
+def validate_no_cycle(
+    db: Session, workspace_id: uuid.UUID, union_id: uuid.UUID, child_id: uuid.UUID
+) -> None:
     # 1. Fetch union and verify workspace ownership
     union = db.get(FamilyUnion, union_id)
     if not union or union.workspace_id != workspace_id or union.is_deleted:

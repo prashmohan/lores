@@ -24,15 +24,11 @@ class FamilyUnion(Base, TimestampMixin):
     partner2_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("people.id"), nullable=True
     )
-    union_type: Mapped[str] = mapped_column(
-        String(30), default="marriage", nullable=False
-    )
+    union_type: Mapped[str] = mapped_column(String(30), default="marriage", nullable=False)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     start_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
     end_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

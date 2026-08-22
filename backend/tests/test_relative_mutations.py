@@ -111,8 +111,12 @@ def test_add_child_atomically_reuses_or_creates_union(db_session):
     db_session.commit()
 
     # Check both children belong to the same union
-    rel1 = db_session.scalar(select(ChildRelationship).where(ChildRelationship.child_id == child1.id))
-    rel2 = db_session.scalar(select(ChildRelationship).where(ChildRelationship.child_id == child2.id))
+    rel1 = db_session.scalar(
+        select(ChildRelationship).where(ChildRelationship.child_id == child1.id)
+    )
+    rel2 = db_session.scalar(
+        select(ChildRelationship).where(ChildRelationship.child_id == child2.id)
+    )
     assert rel1 is not None and rel2 is not None
     assert rel1.union_id == rel2.union_id
 
@@ -138,8 +142,12 @@ def test_add_sibling_atomically_wires_to_parent_union(db_session):
     )
     db_session.commit()
 
-    focus_rel = db_session.scalar(select(ChildRelationship).where(ChildRelationship.child_id == focus.id))
-    sib_rel = db_session.scalar(select(ChildRelationship).where(ChildRelationship.child_id == sibling.id))
+    focus_rel = db_session.scalar(
+        select(ChildRelationship).where(ChildRelationship.child_id == focus.id)
+    )
+    sib_rel = db_session.scalar(
+        select(ChildRelationship).where(ChildRelationship.child_id == sibling.id)
+    )
     assert focus_rel is not None
     assert sib_rel is not None
     assert focus_rel.union_id == sib_rel.union_id
@@ -154,7 +162,9 @@ def test_add_sibling_atomically_wires_to_parent_union(db_session):
         actor=actor,
     )
     db_session.commit()
-    sib2_rel = db_session.scalar(select(ChildRelationship).where(ChildRelationship.child_id == sibling2.id))
+    sib2_rel = db_session.scalar(
+        select(ChildRelationship).where(ChildRelationship.child_id == sibling2.id)
+    )
     assert sib2_rel is not None
     assert sib2_rel.union_id == focus_rel.union_id
 
@@ -174,7 +184,9 @@ def test_add_parent_populates_second_partner_slot_in_existing_union(db_session):
     p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=mother.id, partner2_id=None)
     db_session.add(p_union)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id))
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id)
+    )
     db_session.commit()
 
     # Add Father atomically
@@ -211,7 +223,9 @@ def test_add_parent_when_union_is_full_creates_second_parent_union(db_session):
     p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=mother.id, partner2_id=father.id)
     db_session.add(p_union)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id))
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id)
+    )
     db_session.commit()
 
     # Add Step-mother

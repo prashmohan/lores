@@ -21,14 +21,8 @@ class ChildRelationship(Base, TimestampMixin):
     union_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("family_unions.id"), nullable=False
     )
-    child_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("people.id"), nullable=False
-    )
-    relationship_type: Mapped[str] = mapped_column(
-        String(30), default="biological", nullable=False
-    )
+    child_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("people.id"), nullable=False)
+    relationship_type: Mapped[str] = mapped_column(String(30), default="biological", nullable=False)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

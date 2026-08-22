@@ -242,16 +242,12 @@ def test_remove_member(db_session):
     )
     db_session.commit()
 
-    assert (
-        get_user_role_in_workspace(db_session, workspace_id=ws.id, user_id=member.id) == "viewer"
-    )
+    assert get_user_role_in_workspace(db_session, workspace_id=ws.id, user_id=member.id) == "viewer"
 
     removed = remove_member(db_session, workspace_id=ws.id, user_id=member.id)
     db_session.commit()
     assert removed is True
-    assert (
-        get_user_role_in_workspace(db_session, workspace_id=ws.id, user_id=member.id) is None
-    )
+    assert get_user_role_in_workspace(db_session, workspace_id=ws.id, user_id=member.id) is None
 
     # Removing non-member returns False
     assert remove_member(db_session, workspace_id=ws.id, user_id=member.id) is False

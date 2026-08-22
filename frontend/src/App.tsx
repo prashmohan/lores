@@ -27,7 +27,13 @@ export const App: React.FC = () => {
   const [focusNeighborhood, setFocusNeighborhood] = useState<FocusNeighborhoodResponse | null>(null);
   const [focusHistory, setFocusHistory] = useState<BreadcrumbItem[]>([]);
   const [allPeople, setAllPeople] = useState<PersonRead[]>([]);
-  const [highContrast, setHighContrast] = useState(false);
+  const [highContrast, setHighContrast] = useState(() => {
+    try {
+      return localStorage.getItem('lores_theme_high_contrast') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   // Active view tab: 'focus' or 'map'
   const [activeTab, setActiveTab] = useState<'focus' | 'map'>('focus');
@@ -49,17 +55,23 @@ export const App: React.FC = () => {
   const [treeLoading, setTreeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Toggle high-contrast mode class on HTML body
+  // Synchronize high-contrast class and local storage
+  useEffect(() => {
+    if (highContrast) {
+      document.documentElement.classList.add('high-contrast');
+    } else {
+      document.documentElement.classList.remove('high-contrast');
+    }
+    try {
+      localStorage.setItem('lores_theme_high_contrast', String(highContrast));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [highContrast]);
+
+  // Toggle high-contrast mode
   const handleToggleHighContrast = () => {
-    setHighContrast((prev) => {
-      const next = !prev;
-      if (next) {
-        document.documentElement.classList.add('high-contrast');
-      } else {
-        document.documentElement.classList.remove('high-contrast');
-      }
-      return next;
-    });
+    setHighContrast((prev) => !prev);
   };
 
   // Fetch focus neighborhood for a person

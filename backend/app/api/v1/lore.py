@@ -53,9 +53,7 @@ def get_lore_for_person(
     _role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
-    return lore_service.get_lore_for_person(
-        db, workspace_id=workspace_id, person_id=person_id
-    )
+    return lore_service.get_lore_for_person(db, workspace_id=workspace_id, person_id=person_id)
 
 
 @router.get("/{lore_id}", response_model=LoreNoteRead)

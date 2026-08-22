@@ -83,20 +83,26 @@ def test_focus_neighborhood_resolves_all_relatives_and_masks_living(db_session):
     p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=father.id, partner2_id=mother.id)
     db_session.add(p_union)
     db_session.flush()
-    db_session.add_all([
-        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=focus.id),
-        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=sibling.id),
-    ])
+    db_session.add_all(
+        [
+            ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=focus.id),
+            ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=sibling.id),
+        ]
+    )
 
     # Focus Union -> Child
     f_union = FamilyUnion(workspace_id=workspace_id, partner1_id=focus.id, partner2_id=partner.id)
     db_session.add(f_union)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=f_union.id, child_id=child.id))
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=f_union.id, child_id=child.id)
+    )
     db_session.commit()
 
     # 1. As Collaborator -> full details visible
-    hood_collab = get_focus_neighborhood(db_session, workspace_id, focus.id, viewer_role="collaborator")
+    hood_collab = get_focus_neighborhood(
+        db_session, workspace_id, focus.id, viewer_role="collaborator"
+    )
     assert hood_collab["focus_person"]["id"] == str(focus.id)
     assert len(hood_collab["parents"]) == 2
     assert len(hood_collab["siblings"]) == 1
@@ -131,7 +137,9 @@ def test_focus_neighborhood_raises_for_invalid_or_deleted_person(db_session):
     other_workspace_id = uuid.uuid4()
 
     person = Person(workspace_id=other_workspace_id, first_name="Other", last_name="WS")
-    deleted_person = Person(workspace_id=workspace_id, first_name="Deleted", last_name="Person", is_deleted=True)
+    deleted_person = Person(
+        workspace_id=workspace_id, first_name="Deleted", last_name="Person", is_deleted=True
+    )
     db_session.add_all([person, deleted_person])
     db_session.commit()
 
@@ -152,50 +160,91 @@ def test_focus_neighborhood_ignores_soft_deleted_relatives_and_unions(db_session
     workspace_id = uuid.uuid4()
 
     father = Person(workspace_id=workspace_id, first_name="Father", last_name="Active")
-    deleted_mother = Person(workspace_id=workspace_id, first_name="Mother", last_name="Deleted", is_deleted=True)
+    deleted_mother = Person(
+        workspace_id=workspace_id, first_name="Mother", last_name="Deleted", is_deleted=True
+    )
     focus = Person(workspace_id=workspace_id, first_name="Focus", last_name="Person")
-    deleted_sibling = Person(workspace_id=workspace_id, first_name="Sibling", last_name="Deleted", is_deleted=True)
+    deleted_sibling = Person(
+        workspace_id=workspace_id, first_name="Sibling", last_name="Deleted", is_deleted=True
+    )
     active_sibling = Person(workspace_id=workspace_id, first_name="Sibling", last_name="Active")
 
     partner = Person(workspace_id=workspace_id, first_name="Partner", last_name="Active")
-    deleted_partner = Person(workspace_id=workspace_id, first_name="Partner", last_name="Deleted", is_deleted=True)
+    deleted_partner = Person(
+        workspace_id=workspace_id, first_name="Partner", last_name="Deleted", is_deleted=True
+    )
     child = Person(workspace_id=workspace_id, first_name="Child", last_name="Active")
 
-    db_session.add_all([father, deleted_mother, focus, deleted_sibling, active_sibling, partner, deleted_partner, child])
+    db_session.add_all(
+        [
+            father,
+            deleted_mother,
+            focus,
+            deleted_sibling,
+            active_sibling,
+            partner,
+            deleted_partner,
+            child,
+        ]
+    )
     db_session.commit()
 
     # Active parent union with 1 active parent and 1 deleted parent
-    p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=father.id, partner2_id=deleted_mother.id)
+    p_union = FamilyUnion(
+        workspace_id=workspace_id, partner1_id=father.id, partner2_id=deleted_mother.id
+    )
     # Deleted parent union
     deleted_p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=father.id, is_deleted=True)
     db_session.add_all([p_union, deleted_p_union])
     db_session.flush()
 
     # Add focus and siblings
-    db_session.add_all([
-        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=focus.id),
-        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=deleted_sibling.id),
-        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=active_sibling.id),
-        # Child relationship in deleted parent union
-        ChildRelationship(workspace_id=workspace_id, union_id=deleted_p_union.id, child_id=focus.id),
-    ])
+    db_session.add_all(
+        [
+            ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=focus.id),
+            ChildRelationship(
+                workspace_id=workspace_id, union_id=p_union.id, child_id=deleted_sibling.id
+            ),
+            ChildRelationship(
+                workspace_id=workspace_id, union_id=p_union.id, child_id=active_sibling.id
+            ),
+            # Child relationship in deleted parent union
+            ChildRelationship(
+                workspace_id=workspace_id, union_id=deleted_p_union.id, child_id=focus.id
+            ),
+        ]
+    )
 
     # Active partner union
     f_union = FamilyUnion(workspace_id=workspace_id, partner1_id=focus.id, partner2_id=partner.id)
     # Deleted partner union
-    deleted_f_union = FamilyUnion(workspace_id=workspace_id, partner1_id=focus.id, partner2_id=deleted_partner.id, is_deleted=True)
+    deleted_f_union = FamilyUnion(
+        workspace_id=workspace_id,
+        partner1_id=focus.id,
+        partner2_id=deleted_partner.id,
+        is_deleted=True,
+    )
     db_session.add_all([f_union, deleted_f_union])
     db_session.flush()
 
     # Active child in f_union, and deleted child relationship in f_union
-    deleted_child_rel_person = Person(workspace_id=workspace_id, first_name="Child", last_name="RelDeleted")
+    deleted_child_rel_person = Person(
+        workspace_id=workspace_id, first_name="Child", last_name="RelDeleted"
+    )
     db_session.add(deleted_child_rel_person)
     db_session.flush()
 
-    db_session.add_all([
-        ChildRelationship(workspace_id=workspace_id, union_id=f_union.id, child_id=child.id),
-        ChildRelationship(workspace_id=workspace_id, union_id=f_union.id, child_id=deleted_child_rel_person.id, is_deleted=True),
-    ])
+    db_session.add_all(
+        [
+            ChildRelationship(workspace_id=workspace_id, union_id=f_union.id, child_id=child.id),
+            ChildRelationship(
+                workspace_id=workspace_id,
+                union_id=f_union.id,
+                child_id=deleted_child_rel_person.id,
+                is_deleted=True,
+            ),
+        ]
+    )
     db_session.commit()
 
     hood = get_focus_neighborhood(db_session, workspace_id, focus.id, viewer_role="collaborator")

@@ -23,9 +23,7 @@ class ConcurrencyConflictError(ValueError):
         self.details: dict[str, Any] = details or {}
 
 
-def get_person_by_id(
-    db: Session, workspace_id: uuid.UUID, person_id: uuid.UUID
-) -> Person | None:
+def get_person_by_id(db: Session, workspace_id: uuid.UUID, person_id: uuid.UUID) -> Person | None:
     person = db.get(Person, person_id)
     if not person or person.workspace_id != workspace_id or person.is_deleted:
         return None
@@ -62,11 +60,7 @@ def create_person(
     person_data: dict[str, Any] | PersonCreate,
     actor: User,
 ) -> Person:
-    data = (
-        person_data.model_dump()
-        if isinstance(person_data, PersonCreate)
-        else dict(person_data)
-    )
+    data = person_data.model_dump() if isinstance(person_data, PersonCreate) else dict(person_data)
 
     person = Person(
         workspace_id=workspace_id,
@@ -117,11 +111,7 @@ def add_relative_atomic(
     if relative_type not in allowed_types:
         raise ValueError(f"Unsupported relative type: {relative_type}")
 
-    data = (
-        person_data.model_dump()
-        if isinstance(person_data, PersonCreate)
-        else dict(person_data)
-    )
+    data = person_data.model_dump() if isinstance(person_data, PersonCreate) else dict(person_data)
 
     # 1. Create new person record
     new_person = Person(
@@ -174,9 +164,7 @@ def add_relative_atomic(
                     union.partner2_id = new_person.id
                     validate_no_cycle(db, workspace_id, union.id, base_person_id)
                 else:
-                    new_union = FamilyUnion(
-                        workspace_id=workspace_id, partner1_id=new_person.id
-                    )
+                    new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
                     db.add(new_union)
                     db.flush()
                     validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
@@ -188,9 +176,7 @@ def add_relative_atomic(
                         )
                     )
             else:
-                new_union = FamilyUnion(
-                    workspace_id=workspace_id, partner1_id=new_person.id
-                )
+                new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
                 db.add(new_union)
                 db.flush()
                 validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
@@ -202,9 +188,7 @@ def add_relative_atomic(
                     )
                 )
         else:
-            new_union = FamilyUnion(
-                workspace_id=workspace_id, partner1_id=new_person.id
-            )
+            new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
             db.add(new_union)
             db.flush()
             validate_no_cycle(db, workspace_id, new_union.id, base_person_id)

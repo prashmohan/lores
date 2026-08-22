@@ -396,7 +396,9 @@ def purge_trash(
     for p in deleted_people:
         db.delete(p)
 
-    total_purged = len(deleted_lores) + len(deleted_rels) + len(deleted_unions) + len(deleted_people)
+    total_purged = (
+        len(deleted_lores) + len(deleted_rels) + len(deleted_unions) + len(deleted_people)
+    )
     db.flush()
 
     record_audit_event(

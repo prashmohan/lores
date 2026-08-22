@@ -56,9 +56,7 @@ def purge_trash_items(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Any:
-    purged_count = lore_service.purge_trash(
-        db, workspace_id=workspace_id, actor=current_user
-    )
+    purged_count = lore_service.purge_trash(db, workspace_id=workspace_id, actor=current_user)
     db.commit()
     return TrashPurgeResponse(
         purged_count=purged_count,
@@ -78,6 +76,4 @@ def get_audit_logs(
         return audit_service.get_entity_audit_logs(
             db, workspace_id=workspace_id, entity_id=entity_id
         )
-    return audit_service.get_workspace_audit_logs(
-        db, workspace_id=workspace_id, limit=limit
-    )
+    return audit_service.get_workspace_audit_logs(db, workspace_id=workspace_id, limit=limit)

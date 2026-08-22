@@ -100,7 +100,11 @@ def test_lore_crud_and_tags_and_event_year(db_session):
         db_session,
         workspace_id=workspace_id,
         lore_id=lore.id,
-        updates={"title": "The Dalek Asylum Souffle", "event_year": 2013, "tags": ["asylum", "souffle"]},
+        updates={
+            "title": "The Dalek Asylum Souffle",
+            "event_year": 2013,
+            "tags": ["asylum", "souffle"],
+        },
         actor=actor,
     )
     db_session.commit()
@@ -247,7 +251,9 @@ def test_lore_and_trash_validation_errors(db_session):
         create_lore(db_session, workspace2_id, p1.id, "Title", "Content", actor)
 
     # Valid lore
-    lore = create_lore(db_session, workspace1_id, p1.id, "The Boy Who Lived", "Under the stairs.", actor)
+    lore = create_lore(
+        db_session, workspace1_id, p1.id, "The Boy Who Lived", "Under the stairs.", actor
+    )
     db_session.commit()
 
     # Soft delete in wrong workspace
@@ -277,7 +283,9 @@ def test_audit_logs_recorded(db_session):
     db_session.add(p)
     db_session.commit()
 
-    lore = create_lore(db_session, workspace_id, p.id, "Herbology Tale", "Found a Mimbulus mimbletonia.", actor)
+    lore = create_lore(
+        db_session, workspace_id, p.id, "Herbology Tale", "Found a Mimbulus mimbletonia.", actor
+    )
     db_session.commit()
 
     update_lore(db_session, workspace_id, lore.id, {"title": "Rare Herbology Tale"}, actor)

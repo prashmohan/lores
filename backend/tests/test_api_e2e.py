@@ -36,7 +36,9 @@ def fixture_client():
     Base.metadata.drop_all(bind=engine)
 
 
-def helper_login(client: TestClient, email: str, display_name: str | None = None) -> tuple[str, dict[str, str]]:
+def helper_login(
+    client: TestClient, email: str, display_name: str | None = None
+) -> tuple[str, dict[str, str]]:
     req_res = client.post(
         "/api/v1/auth/request-otp",
         json={"email": email, "display_name": display_name or email.split("@")[0]},
@@ -56,17 +58,23 @@ def helper_login(client: TestClient, email: str, display_name: str | None = None
 
 def test_auth_flows(client):
     # Request OTP
-    req = client.post("/api/v1/auth/request-otp", json={"email": "user@test.com", "display_name": "Test User"})
+    req = client.post(
+        "/api/v1/auth/request-otp", json={"email": "user@test.com", "display_name": "Test User"}
+    )
     assert req.status_code == 200
     otp = req.json()["dev_otp"]
     assert len(otp) == 6
 
     # Verify with invalid OTP
-    bad_verify = client.post("/api/v1/auth/verify-otp", json={"email": "user@test.com", "code": "000000"})
+    bad_verify = client.post(
+        "/api/v1/auth/verify-otp", json={"email": "user@test.com", "code": "000000"}
+    )
     assert bad_verify.status_code == 400
 
     # Verify with valid OTP
-    good_verify = client.post("/api/v1/auth/verify-otp", json={"email": "user@test.com", "code": otp})
+    good_verify = client.post(
+        "/api/v1/auth/verify-otp", json={"email": "user@test.com", "code": otp}
+    )
     assert good_verify.status_code == 200
     token = good_verify.json()["access_token"]
     assert good_verify.json()["user"]["email"] == "user@test.com"
@@ -82,7 +90,9 @@ def test_auth_flows(client):
     assert logout_res.status_code == 200
 
     # Invalid token check
-    bad_auth = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer invalid.token.value"})
+    bad_auth = client.get(
+        "/api/v1/auth/me", headers={"Authorization": "Bearer invalid.token.value"}
+    )
     assert bad_auth.status_code == 401
 
 
@@ -129,7 +139,12 @@ def test_full_api_lifecycle(client):
     # 6. Add Initial Person
     p_res = client.post(
         f"/api/v1/workspaces/{workspace_id}/people",
-        json={"first_name": "Alice", "last_name": "Smith", "gender": "female", "birth_date": "1990-05-15"},
+        json={
+            "first_name": "Alice",
+            "last_name": "Smith",
+            "gender": "female",
+            "birth_date": "1990-05-15",
+        },
         headers=headers,
     )
     assert p_res.status_code == 200
@@ -149,7 +164,12 @@ def test_full_api_lifecycle(client):
         json={
             "relative_type": "parent",
             "base_person_id": person_id,
-            "person": {"first_name": "Bob", "last_name": "Smith", "gender": "male", "birth_date": "1960-01-01"},
+            "person": {
+                "first_name": "Bob",
+                "last_name": "Smith",
+                "gender": "male",
+                "birth_date": "1960-01-01",
+            },
         },
         headers=headers,
     )
@@ -240,7 +260,9 @@ def test_workspace_membership_and_rbac(client):
     _, stranger_headers = helper_login(client, "stranger@example.com", "Stranger")
 
     # Admin creates workspace
-    ws_res = client.post("/api/v1/workspaces", json={"name": "Clan Workspace"}, headers=admin_headers)
+    ws_res = client.post(
+        "/api/v1/workspaces", json={"name": "Clan Workspace"}, headers=admin_headers
+    )
     assert ws_res.status_code == 200
     ws_id = ws_res.json()["id"]
 
@@ -280,7 +302,9 @@ def test_workspace_membership_and_rbac(client):
     assert cant_audit.status_code == 403
 
     # Admin removes viewer
-    rm_res = client.delete(f"/api/v1/workspaces/{ws_id}/members/{viewer_user_id}", headers=admin_headers)
+    rm_res = client.delete(
+        f"/api/v1/workspaces/{ws_id}/members/{viewer_user_id}", headers=admin_headers
+    )
     assert rm_res.status_code == 200
 
     # Viewer access is revoked -> 403
@@ -353,7 +377,9 @@ def test_tree_cycle_detection_and_viewer_privacy(client):
     _, admin_headers = helper_login(client, "curator@example.com", "Curator")
     _, viewer_headers = helper_login(client, "guest@example.com", "Guest")
 
-    ws_res = client.post("/api/v1/workspaces", json={"name": "Privacy & Cycles"}, headers=admin_headers)
+    ws_res = client.post(
+        "/api/v1/workspaces", json={"name": "Privacy & Cycles"}, headers=admin_headers
+    )
     ws_id = ws_res.json()["id"]
 
     # Add guest as viewer
@@ -395,13 +421,17 @@ def test_tree_cycle_detection_and_viewer_privacy(client):
     ).json()
 
     # Curator sees full details
-    curator_view = client.get(f"/api/v1/workspaces/{ws_id}/tree/focus/{root['id']}", headers=admin_headers).json()
+    curator_view = client.get(
+        f"/api/v1/workspaces/{ws_id}/tree/focus/{root['id']}", headers=admin_headers
+    ).json()
     assert curator_view["focus_person"]["birth_date"] == "1995-10-20"
     assert curator_view["focus_person"]["birth_place"] == "Seattle, WA"
     assert curator_view["parents"][0]["birth_date"] == "1950-01-01"
 
     # Viewer sees MASKED birth_date and birth_place for LIVING focus person, but visible for deceased parent
-    viewer_view = client.get(f"/api/v1/workspaces/{ws_id}/tree/focus/{root['id']}", headers=viewer_headers).json()
+    viewer_view = client.get(
+        f"/api/v1/workspaces/{ws_id}/tree/focus/{root['id']}", headers=viewer_headers
+    ).json()
     assert viewer_view["focus_person"]["birth_date"] is None
     assert viewer_view["focus_person"]["birth_place"] is None
     assert viewer_view["parents"][0]["birth_date"] == "1950-01-01"

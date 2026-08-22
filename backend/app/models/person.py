@@ -25,24 +25,18 @@ class Person(Base, TimestampMixin):
     is_living: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     birth_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    birth_date_qualifier: Mapped[str] = mapped_column(
-        String(20), default="exact", nullable=False
-    )
+    birth_date_qualifier: Mapped[str] = mapped_column(String(20), default="exact", nullable=False)
     birth_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     death_date: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    death_date_qualifier: Mapped[str] = mapped_column(
-        String(20), default="exact", nullable=False
-    )
+    death_date_qualifier: Mapped[str] = mapped_column(String(20), default="exact", nullable=False)
     death_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     biography: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_by_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )

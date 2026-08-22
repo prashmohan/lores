@@ -25,13 +25,17 @@ def test_detects_and_prevents_ancestor_cycle(db_session):
     union_1 = FamilyUnion(workspace_id=workspace_id, partner1_id=grandfather.id)
     db_session.add(union_1)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=union_1.id, child_id=father.id))
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=union_1.id, child_id=father.id)
+    )
 
     # Father Union -> Son
     union_2 = FamilyUnion(workspace_id=workspace_id, partner1_id=father.id)
     db_session.add(union_2)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=union_2.id, child_id=son.id))
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=union_2.id, child_id=son.id)
+    )
     db_session.commit()
 
     # Attempting to make Son a parent of Grandfather (Union 3 with partner=Son, child=Grandfather)
@@ -40,7 +44,9 @@ def test_detects_and_prevents_ancestor_cycle(db_session):
     db_session.flush()
 
     with pytest.raises(ValueError, match="Cycle detected: A person cannot be their own ancestor"):
-        validate_no_cycle(db_session, workspace_id=workspace_id, union_id=union_3.id, child_id=grandfather.id)
+        validate_no_cycle(
+            db_session, workspace_id=workspace_id, union_id=union_3.id, child_id=grandfather.id
+        )
 
 
 def test_detects_and_prevents_self_parent_cycle(db_session):
@@ -55,7 +61,9 @@ def test_detects_and_prevents_self_parent_cycle(db_session):
     db_session.flush()
 
     with pytest.raises(ValueError, match="Cycle detected: A person cannot be their own parent"):
-        validate_no_cycle(db_session, workspace_id=workspace_id, union_id=union.id, child_id=person.id)
+        validate_no_cycle(
+            db_session, workspace_id=workspace_id, union_id=union.id, child_id=person.id
+        )
 
     # Union with Alice as partner2
     partner = Person(workspace_id=workspace_id, first_name="Bob", last_name="Smith")
@@ -67,7 +75,9 @@ def test_detects_and_prevents_self_parent_cycle(db_session):
     db_session.flush()
 
     with pytest.raises(ValueError, match="Cycle detected: A person cannot be their own parent"):
-        validate_no_cycle(db_session, workspace_id=workspace_id, union_id=union_p2.id, child_id=person.id)
+        validate_no_cycle(
+            db_session, workspace_id=workspace_id, union_id=union_p2.id, child_id=person.id
+        )
 
 
 def test_validate_no_cycle_raises_on_invalid_union_or_workspace(db_session):
@@ -80,11 +90,18 @@ def test_validate_no_cycle_raises_on_invalid_union_or_workspace(db_session):
     db_session.commit()
 
     with pytest.raises(ValueError, match="Union not found in workspace"):
-        validate_no_cycle(db_session, workspace_id=workspace_id, union_id=union.id, child_id=person.id)
+        validate_no_cycle(
+            db_session, workspace_id=workspace_id, union_id=union.id, child_id=person.id
+        )
 
     non_existent_union_id = uuid.uuid4()
     with pytest.raises(ValueError, match="Union not found in workspace"):
-        validate_no_cycle(db_session, workspace_id=workspace_id, union_id=non_existent_union_id, child_id=person.id)
+        validate_no_cycle(
+            db_session,
+            workspace_id=workspace_id,
+            union_id=non_existent_union_id,
+            child_id=person.id,
+        )
 
 
 def test_get_descendants_ids_and_valid_lineage(db_session):
@@ -106,10 +123,12 @@ def test_get_descendants_ids_and_valid_lineage(db_session):
     u1 = FamilyUnion(workspace_id=workspace_id, partner1_id=p1.id, partner2_id=p2.id)
     db_session.add(u1)
     db_session.flush()
-    db_session.add_all([
-        ChildRelationship(workspace_id=workspace_id, union_id=u1.id, child_id=c1.id),
-        ChildRelationship(workspace_id=workspace_id, union_id=u1.id, child_id=c2.id),
-    ])
+    db_session.add_all(
+        [
+            ChildRelationship(workspace_id=workspace_id, union_id=u1.id, child_id=c1.id),
+            ChildRelationship(workspace_id=workspace_id, union_id=u1.id, child_id=c2.id),
+        ]
+    )
 
     # Union 2: c1 -> gc1
     u2 = FamilyUnion(workspace_id=workspace_id, partner1_id=c1.id)
@@ -119,15 +138,21 @@ def test_get_descendants_ids_and_valid_lineage(db_session):
     db_session.commit()
 
     # Descendants of p1 should be {c1, c2, gc1}
-    descendants_p1 = get_descendants_ids(db_session, workspace_id=workspace_id, root_person_id=p1.id)
+    descendants_p1 = get_descendants_ids(
+        db_session, workspace_id=workspace_id, root_person_id=p1.id
+    )
     assert descendants_p1 == {c1.id, c2.id, gc1.id}
 
     # Descendants of c1 should be {gc1}
-    descendants_c1 = get_descendants_ids(db_session, workspace_id=workspace_id, root_person_id=c1.id)
+    descendants_c1 = get_descendants_ids(
+        db_session, workspace_id=workspace_id, root_person_id=c1.id
+    )
     assert descendants_c1 == {gc1.id}
 
     # Descendants of gc1 should be empty set
-    descendants_gc1 = get_descendants_ids(db_session, workspace_id=workspace_id, root_person_id=gc1.id)
+    descendants_gc1 = get_descendants_ids(
+        db_session, workspace_id=workspace_id, root_person_id=gc1.id
+    )
     assert descendants_gc1 == set()
 
     # Adding a new unrelated person as child of u2 is valid
@@ -160,7 +185,11 @@ def test_ignores_soft_deleted_unions_and_relationships(db_session):
     u2 = FamilyUnion(workspace_id=workspace_id, partner1_id=p1.id, is_deleted=False)
     db_session.add(u2)
     db_session.flush()
-    db_session.add(ChildRelationship(workspace_id=workspace_id, union_id=u2.id, child_id=p2.id, is_deleted=True))
+    db_session.add(
+        ChildRelationship(
+            workspace_id=workspace_id, union_id=u2.id, child_id=p2.id, is_deleted=True
+        )
+    )
     db_session.commit()
 
     assert get_descendants_ids(db_session, workspace_id=workspace_id, root_person_id=p1.id) == set()

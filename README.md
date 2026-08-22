@@ -153,15 +153,22 @@ The frontend will start at `http://localhost:5173`. Requests to `/api/*` are aut
 
 ### 5.4 Running with Docker & Docker Compose
 
-Lores includes complete containerization with production-ready multi-stage Docker builds:
+Lores includes complete containerization with production-ready multi-stage Docker builds.
+
+Host ports can be configured in your `.env` file via `BACKEND_PORT` (default: 8000) and `FRONTEND_PORT` (default: 3000):
 
 ```bash
-# Build and launch both backend (FastAPI) and frontend (Nginx reverse-proxy)
+# 1. Copy the environment configuration template
+cp .env.example .env
+
+# 2. Adjust BACKEND_PORT or FRONTEND_PORT in .env if needed (e.g. BACKEND_PORT=8080)
+
+# 3. Build and launch both backend (FastAPI) and frontend (Nginx reverse-proxy)
 docker compose up --build
 ```
 
-- **Frontend Web Application**: [`http://localhost`](http://localhost) (or `http://localhost:3000`).
-- **Interactive OpenAPI Documentation**: [`http://localhost:8000/docs`](http://localhost:8000/docs).
+- **Frontend Web Application**: Accessible at `http://localhost:${FRONTEND_PORT:-3000}` (e.g. [`http://localhost:3000`](http://localhost:3000)).
+- **Interactive OpenAPI Documentation**: Accessible at `http://localhost:${BACKEND_PORT:-8000}/docs` (e.g. [`http://localhost:8000/docs`](http://localhost:8000/docs)).
 - **Persistent Data Storage**: Database records are safely persisted in the named Docker volume `lores_data`.
 
 To stop the containers:

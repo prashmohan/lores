@@ -146,10 +146,28 @@ The frontend will start at `http://localhost:5173`. Requests to `/api/*` are aut
 
 ### 5.3 Passwordless Login Workflow
 
-1. Open `http://localhost:5173` in your browser.
+1. Open `http://localhost:5173` (or `http://localhost` in Docker) in your browser.
 2. Enter an email address (e.g., `storykeeper@family.org`).
-3. In local development mode, the OTP passcode is logged to the backend console and returned in the mock email response for instant access.
+3. In local development mode, the OTP passcode is logged to the backend console and returned in the mock response for instant access.
 4. Enter the 6-digit passcode to verify and enter the workspace.
+
+### 5.4 Running with Docker & Docker Compose
+
+Lores includes complete containerization with production-ready multi-stage Docker builds:
+
+```bash
+# Build and launch both backend (FastAPI) and frontend (Nginx reverse-proxy)
+docker compose up --build
+```
+
+- **Frontend Web Application**: [`http://localhost`](http://localhost) (or `http://localhost:3000`).
+- **Interactive OpenAPI Documentation**: [`http://localhost:8000/docs`](http://localhost:8000/docs).
+- **Persistent Data Storage**: Database records are safely persisted in the named Docker volume `lores_data`.
+
+To stop the containers:
+```bash
+docker compose down
+```
 
 ---
 

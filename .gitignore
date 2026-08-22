@@ -26,6 +26,10 @@ dist/
 .next/
 coverage/
 *.tsbuildinfo
+test-results/
+playwright-report/
+blob-report/
+.lighthouseci/
 
 # OS / Editor files
 .DS_Store

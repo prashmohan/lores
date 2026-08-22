@@ -25,6 +25,7 @@ node_modules/
 dist/
 .next/
 coverage/
+*.tsbuildinfo
 
 # OS / Editor files
 .DS_Store

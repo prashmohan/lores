@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans min-h-screen selection:bg-amber-200 selection:text-amber-900;
+  }
+}
+
+/* Accessible focus styling */
+:focus-visible {
+  @apply outline-none ring-4 ring-amber-500 ring-offset-2;
+}
+
+/* High contrast mode overrides */
+.high-contrast {
+  --tw-bg-opacity: 1;
+}
+
+.high-contrast body {
+  background-color: #ffffff;
+  color: #000000;
+}

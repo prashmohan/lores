@@ -10,7 +10,7 @@ This document outlines mandatory coding standards, toolchains, testing protocols
 
 The repository is structured as a full-stack monorepo:
 - **`backend/`**: FastAPI (Python 3.12+), SQLAlchemy 2.0 (async), Pydantic v2, SQLite (`aiosqlite`), JWT & OTP authentication.
-- **`frontend/`**: React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons, Vitest.
+- **`frontend/`**: React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons, Vitest, Vitest-Axe, Playwright.
 - **`docs/`**: Architecture design specifications and implementation plans (located in `docs/superpowers/`).
 
 ---
@@ -38,9 +38,11 @@ All frontend commands should be run from the `frontend/` directory:
 | Task | Command | Standard / Expectation |
 | :--- | :--- | :--- |
 | **Build & Typecheck** | `npm run build` | `tsc -b` and Vite bundle with 0 type errors |
-| **Unit & Component Tests** | `npm test` (`vitest run`) | 100% passing test suites |
-| **Lint** | `npm run lint` | ESLint clean |
-| **Dev Server** | `npm run dev` | Local Vite dev server |
+| **Static A11y & Lint** | `npm run lint` | ESLint + `eslint-plugin-jsx-a11y` clean (0 errors) |
+| **Unit & Component A11y** | `npm test` (`vitest run`) | 100% passing test suites including `vitest-axe` |
+| **E2E Browser A11y** | `npm run test:e2e:a11y` | 100% passing Playwright + Axe-Core audits |
+| **Lighthouse CI** | `npx lhci autorun` | $\ge 95\%$ Accessibility score |
+| **Dev Server** | `npm run dev` | Local Vite dev server with `@axe-core/react` live console auditing |
 
 ### 2.3 Mandatory Pre-Commit / Pre-PR Verification Pipeline
 
@@ -55,8 +57,10 @@ pytest -v
 
 # 2. Frontend verification (from frontend/ directory)
 cd ../frontend
+npm run lint
 npm run build
 npm test
+npm run test:e2e:a11y
 ```
 
 ---
@@ -71,15 +75,19 @@ npm test
   - `refactor(scope)`: Code change that neither fixes a bug nor adds a feature.
   - `docs(scope)`: Documentation, architecture specs, or comments.
   - `chore(scope)`: Dependencies, build scripts, configuration.
-- **Recognized Scopes**: `auth`, `tree`, `interview`, `map`, `history`, `rbac`, `models`, `api`, `ui`, `deps`.
+- **Recognized Scopes**: `auth`, `tree`, `interview`, `map`, `history`, `rbac`, `models`, `api`, `ui`, `a11y`, `ci`, `deps`.
 - **Commit Messages**: Use imperative mood in the subject line (e.g., `feat(auth): implement passwordless OTP verification`).
-- **Clean Repository**: Never check in temporary files, databases (`*.db`, `*.sqlite`), log files, or cache artifacts (`.pytest_cache`, `.ruff_cache`, `node_modules`, `dist`).
+- **Clean Repository**: Never check in temporary files, databases (`*.db`, `*.sqlite`), log files, or cache artifacts (`.pytest_cache`, `.ruff_cache`, `node_modules`, `dist`, `test-results`).
 
 ---
 
 ## 4. Test-Driven Development (TDD) & Quality Assurance
 
 - **Test-First Discipline**: For all new features, bug fixes, and API endpoints, write failing tests first to establish expected behavior before implementing the code.
+- **Automated Accessibility Testing**:
+  - **Lint Layer**: `eslint-plugin-jsx-a11y` verifies accessible attributes and keyboard bindings statically.
+  - **Component Layer**: Every new dialog, card, or navigation component must have an automated `vitest-axe` test ensuring zero WCAG violations.
+  - **E2E Browser Layer**: Playwright test suites run axe audits across active DOM states, open modals, and navigation routes.
 - **High-Risk Domain Coverage**:
   - **Multi-Tenant Isolation**: Ensure all queries to `Person`, `FamilyUnion`, `ChildRelationship`, `LoreNote`, `MediaItem`, and `AuditLog` explicitly filter by `workspace_id`.
   - **RBAC & Privacy Boundaries**: Verify permission enforcement across roles (`owner`, `admin`, `collaborator`, `viewer`) and ensure living individuals are redacted for unauthorized viewers.

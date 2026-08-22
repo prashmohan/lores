@@ -15,7 +15,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-43200}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost,http://localhost:5173,http://localhost:3000,http://localhost:${APP_PORT:-8156}}
     volumes:
-      - lores_dev_data:/app/data
+      - lores_data:/app/data
     develop:
       watch:
         - action: sync
@@ -58,4 +58,4 @@ services:
           path: ./frontend/package.json
 
 volumes:
-  lores_dev_data:
+  lores_data:

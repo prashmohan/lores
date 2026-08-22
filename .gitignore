@@ -1,4 +1,7 @@
-# Environments
+# Environments & Secrets
+.env
+.env.local
+.env.*.local
 .venv/
 env/
 venv/

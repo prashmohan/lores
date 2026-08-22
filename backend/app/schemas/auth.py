@@ -1,0 +1,41 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr
+
+
+class OTPRequest(BaseModel):
+    email: EmailStr
+    display_name: str | None = None
+
+
+class OTPResponse(BaseModel):
+    message: str
+    email: str
+
+
+class OTPVerifyRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserRead(BaseModel):
+    id: uuid.UUID
+    email: str
+    display_name: str
+    is_superadmin: bool = False
+    created_at: datetime | None = None
+    last_login_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenPayload(BaseModel):
+    sub: str
+    email: str
+    exp: int | None = None

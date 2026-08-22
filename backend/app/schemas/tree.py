@@ -1,4 +1,8 @@
+import uuid
+
 from pydantic import BaseModel, ConfigDict
+
+from app.schemas.person import PersonCreate
 
 
 class PersonSummary(BaseModel):
@@ -26,3 +30,19 @@ class FocusNeighborhoodResponse(BaseModel):
     partners: list[PersonSummary]
     children: list[PersonSummary]
     siblings: list[PersonSummary]
+
+
+class AddRelativeRequest(BaseModel):
+    relative_type: str
+    base_person_id: uuid.UUID
+    person: PersonCreate | None = None
+    person_data: PersonCreate | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    @property
+    def person_payload(self) -> PersonCreate:
+        p = self.person or self.person_data
+        if not p:
+            raise ValueError("Person data is required")
+        return p

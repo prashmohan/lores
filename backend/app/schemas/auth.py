@@ -12,16 +12,12 @@ class OTPRequest(BaseModel):
 class OTPResponse(BaseModel):
     message: str
     email: str
+    dev_otp: str | None = None
 
 
 class OTPVerifyRequest(BaseModel):
     email: EmailStr
     code: str
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 
 class UserRead(BaseModel):
@@ -33,6 +29,13 @@ class UserRead(BaseModel):
     last_login_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token: str = ""
+    token_type: str = "bearer"
+    user: UserRead | None = None
 
 
 class TokenPayload(BaseModel):

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -53,3 +54,18 @@ class TrashRestoreRequest(BaseModel):
 class TrashPurgeResponse(BaseModel):
     purged_count: int
     message: str = "Trash emptied successfully"
+
+
+class AuditLogRead(BaseModel):
+    id: uuid.UUID
+    workspace_id: uuid.UUID
+    actor_id: uuid.UUID | None = None
+    actor_name: str
+    actor_email: str
+    entity_type: str
+    entity_id: uuid.UUID
+    action: str
+    changes: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

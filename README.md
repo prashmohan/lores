@@ -155,20 +155,21 @@ The frontend will start at `http://localhost:5173`. Requests to `/api/*` are aut
 
 Lores includes complete containerization with production-ready multi-stage Docker builds.
 
-Host ports can be configured in your `.env` file via `BACKEND_PORT` (default: 8000) and `FRONTEND_PORT` (default: 3000):
+The host port can be configured in your `.env` file via `APP_PORT` (default: `3000`):
 
 ```bash
 # 1. Copy the environment configuration template
 cp .env.example .env
 
-# 2. Adjust BACKEND_PORT or FRONTEND_PORT in .env if needed (e.g. BACKEND_PORT=8080)
+# 2. Optionally adjust APP_PORT in .env (e.g. APP_PORT=5000 or APP_PORT=8080)
 
-# 3. Build and launch both backend (FastAPI) and frontend (Nginx reverse-proxy)
+# 3. Build and launch all services
 docker compose up --build
 ```
 
-- **Frontend Web Application**: Accessible at `http://localhost:${FRONTEND_PORT:-3000}` (e.g. [`http://localhost:3000`](http://localhost:3000)).
-- **Interactive OpenAPI Documentation**: Accessible at `http://localhost:${BACKEND_PORT:-8000}/docs` (e.g. [`http://localhost:8000/docs`](http://localhost:8000/docs)).
+- **Web Application & UI**: Accessible at `http://localhost:${APP_PORT:-3000}` (e.g. [`http://localhost:3000`](http://localhost:3000)).
+- **Interactive OpenAPI Documentation**: Accessible at `http://localhost:${APP_PORT:-3000}/docs` (e.g. [`http://localhost:3000/docs`](http://localhost:3000/docs)).
+- **Zero Host Port Conflicts**: The backend API is routed through Nginx internally; port 8000 on your host is completely untouched.
 - **Persistent Data Storage**: Database records are safely persisted in the named Docker volume `lores_data`.
 
 To stop the containers:

@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: lores-backend
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/lores.db}
       - JWT_SECRET=${JWT_SECRET:-lores-production-secret-key-change-in-prod-32bytes}
@@ -22,7 +22,7 @@ services:
     container_name: lores-frontend
     restart: unless-stopped
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "${APP_PORT:-3000}:80"
     depends_on:
       - backend
 

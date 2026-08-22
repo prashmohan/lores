@@ -9,14 +9,15 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
-        changeOrigin: true
-      }
-    }
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './tests/setup.ts'
-  }
+    setupFiles: './tests/setup.ts',
+    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['e2e/**', 'node_modules/**'],
+  },
 });
-

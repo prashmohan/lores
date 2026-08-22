@@ -273,8 +273,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
         /* SVG Interactive Canvas */
         <svg
           ref={svgRef}
-          role="img"
-          aria-label="Pedigree chart"
+          aria-label="Family tree pedigree chart"
           className="w-full h-full cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}

@@ -123,7 +123,6 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                autoFocus
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value)}

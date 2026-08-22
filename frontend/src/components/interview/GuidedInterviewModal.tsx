@@ -186,9 +186,9 @@ export const GuidedInterviewModal: React.FC<GuidedInterviewModalProps> = ({
           {step === 1 && (
             <div className="space-y-3">
               <div>
-                <label className="block font-semibold text-slate-800">
+                <p className="block font-semibold text-slate-800">
                   Who would you like to add?
-                </label>
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -244,7 +244,6 @@ export const GuidedInterviewModal: React.FC<GuidedInterviewModalProps> = ({
                   onChange={(e) => setFirstName(e.target.value)}
                   placeholder="e.g. Margaret"
                   className="w-full text-lg p-3 border-2 border-slate-300 rounded-xl mt-1 focus:border-amber-500 outline-none"
-                  autoFocus
                 />
               </div>
 

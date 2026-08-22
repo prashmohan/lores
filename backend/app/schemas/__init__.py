@@ -8,6 +8,15 @@ from app.schemas.auth import (
     TokenResponse,
     UserRead,
 )
+from app.schemas.lore import (
+    LoreNoteBase,
+    LoreNoteCreate,
+    LoreNoteRead,
+    LoreNoteUpdate,
+    TrashItemRead,
+    TrashPurgeResponse,
+    TrashRestoreRequest,
+)
 from app.schemas.person import (
     PersonBase,
     PersonCreate,
@@ -32,6 +41,10 @@ from app.schemas.workspace import (
 
 __all__ = [
     "FocusNeighborhoodResponse",
+    "LoreNoteBase",
+    "LoreNoteCreate",
+    "LoreNoteRead",
+    "LoreNoteUpdate",
     "OTPRequest",
     "OTPResponse",
     "OTPVerifyRequest",
@@ -42,6 +55,9 @@ __all__ = [
     "PersonUpdate",
     "TokenPayload",
     "TokenResponse",
+    "TrashItemRead",
+    "TrashPurgeResponse",
+    "TrashRestoreRequest",
     "UserRead",
     "UserWorkspaceMembership",
     "WorkspaceBase",

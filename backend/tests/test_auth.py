@@ -155,3 +155,26 @@ def test_auth_schemas():
     user_read = UserRead.model_validate(user_data)
     assert user_read.email == "user@example.com"
     assert user_read.is_superadmin is True
+
+
+def test_request_new_otp_invalidates_prior_pending_otp(db_session):
+    email = "grandpa@example.com"
+    token1, otp1 = request_otp(db_session, email=email, display_name="Grandpa Joe")
+    db_session.commit()
+
+    token2, otp2 = request_otp(db_session, email=email, display_name="Grandpa Joe")
+    db_session.commit()
+
+    db_session.refresh(token1)
+    db_session.refresh(token2)
+    assert token1.used_at is not None
+    assert token2.used_at is None
+
+    # First OTP must fail because it was invalidated by the second request
+    with pytest.raises(ValueError, match="Invalid or expired"):
+        verify_otp(db_session, email=email, code=otp1)
+
+    # Second OTP succeeds
+    user, jwt_token = verify_otp(db_session, email=email, code=otp2)
+    assert user.email == email
+    assert jwt_token is not None

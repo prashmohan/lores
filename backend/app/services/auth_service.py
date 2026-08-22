@@ -40,10 +40,20 @@ def request_otp(
 ) -> tuple[MagicAuthToken, str]:
     """Generate a passwordless numeric OTP and associated token secret for email login."""
     clean_email = email.lower().strip()
+    now = datetime.now(UTC)
+
+    # Invalidate all active/pending tokens for this email so only the newly generated OTP is valid
+    active_tokens_stmt = select(MagicAuthToken).where(
+        MagicAuthToken.email == clean_email,
+        MagicAuthToken.used_at.is_(None),
+    )
+    for active_token in db.scalars(active_tokens_stmt).all():
+        active_token.used_at = now
+
     raw_otp = generate_numeric_otp(6)
     code_hash = pwd_context.hash(raw_otp)
     token_secret = secrets.token_urlsafe(32)
-    expires_at = datetime.now(UTC) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+    expires_at = now + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
 
     auth_token = MagicAuthToken(
         email=clean_email,

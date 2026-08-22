@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.models.child import ChildRelationship
+from app.models.lore import LoreNote
 from app.models.person import Person
 from app.models.union import FamilyUnion
 from app.models.user import User
@@ -313,3 +314,36 @@ def test_audit_logs_recorded(db_session):
     assert "SOFT_DELETE" in actions
     assert "RESTORE" in actions
     assert "PURGE" in actions
+
+
+def test_purge_trash_cascades_active_lore_notes_for_soft_deleted_person(db_session):
+    workspace_id, actor = _setup_workspace_and_actor(db_session)
+
+    person = Person(workspace_id=workspace_id, first_name="Arthur", last_name="Dent")
+    db_session.add(person)
+    db_session.commit()
+
+    # Create an active lore note for Arthur (not soft-deleted)
+    lore = create_lore(
+        db_session,
+        workspace_id=workspace_id,
+        person_id=person.id,
+        title="Towel Story",
+        content="Always know where your towel is.",
+        actor=actor,
+    )
+    db_session.commit()
+
+    # Soft delete Arthur only (lore note remains is_deleted=False)
+    soft_delete_person(db_session, workspace_id, person.id, actor)
+    db_session.commit()
+
+    assert lore.is_deleted is False
+
+    # Purge trash - should purge Arthur and cascade delete Arthur's lore notes
+    purged_count = purge_trash(db_session, workspace_id, actor)
+    db_session.commit()
+
+    assert purged_count >= 1
+    assert db_session.get(Person, person.id) is None
+    assert db_session.get(LoreNote, lore.id) is None

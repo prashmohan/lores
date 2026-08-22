@@ -394,6 +394,15 @@ def purge_trash(
         ).all()
     )
     for p in deleted_people:
+        person_lores = list(
+            db.scalars(
+                select(LoreNote).where(
+                    LoreNote.person_id == p.id,
+                )
+            ).all()
+        )
+        for pl in person_lores:
+            db.delete(pl)
         db.delete(p)
 
     total_purged = (

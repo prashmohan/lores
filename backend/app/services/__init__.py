@@ -16,6 +16,10 @@ from app.services.cycle_service import (
     get_descendants_ids,
     validate_no_cycle,
 )
+from app.services.tree_service import (
+    get_focus_neighborhood,
+    serialize_person,
+)
 from app.services.workspace_service import (
     ROLE_HIERARCHY,
     add_or_update_member,
@@ -38,6 +42,7 @@ __all__ = [
     "generate_numeric_otp",
     "get_descendants_ids",
     "get_entity_audit_logs",
+    "get_focus_neighborhood",
     "get_user_role_in_workspace",
     "get_workspace_audit_logs",
     "get_workspace_by_id",
@@ -48,6 +53,7 @@ __all__ = [
     "record_audit_event",
     "remove_member",
     "request_otp",
+    "serialize_person",
     "validate_no_cycle",
     "verify_otp",
 ]

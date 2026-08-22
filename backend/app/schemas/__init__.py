@@ -14,6 +14,10 @@ from app.schemas.person import (
     PersonRead,
     PersonUpdate,
 )
+from app.schemas.tree import (
+    FocusNeighborhoodResponse,
+    PersonSummary,
+)
 from app.schemas.workspace import (
     UserWorkspaceMembership,
     WorkspaceBase,
@@ -27,12 +31,14 @@ from app.schemas.workspace import (
 )
 
 __all__ = [
+    "FocusNeighborhoodResponse",
     "OTPRequest",
     "OTPResponse",
     "OTPVerifyRequest",
     "PersonBase",
     "PersonCreate",
     "PersonRead",
+    "PersonSummary",
     "PersonUpdate",
     "TokenPayload",
     "TokenResponse",

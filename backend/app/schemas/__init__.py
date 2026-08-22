@@ -8,6 +8,12 @@ from app.schemas.auth import (
     TokenResponse,
     UserRead,
 )
+from app.schemas.person import (
+    PersonBase,
+    PersonCreate,
+    PersonRead,
+    PersonUpdate,
+)
 from app.schemas.workspace import (
     UserWorkspaceMembership,
     WorkspaceBase,
@@ -24,6 +30,10 @@ __all__ = [
     "OTPRequest",
     "OTPResponse",
     "OTPVerifyRequest",
+    "PersonBase",
+    "PersonCreate",
+    "PersonRead",
+    "PersonUpdate",
     "TokenPayload",
     "TokenResponse",
     "UserRead",
@@ -37,3 +47,4 @@ __all__ = [
     "WorkspaceRead",
     "WorkspaceUpdate",
 ]
+

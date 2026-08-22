@@ -12,6 +12,10 @@ from app.services.auth_service import (
     request_otp,
     verify_otp,
 )
+from app.services.cycle_service import (
+    get_descendants_ids,
+    validate_no_cycle,
+)
 from app.services.workspace_service import (
     ROLE_HIERARCHY,
     add_or_update_member,
@@ -32,6 +36,7 @@ __all__ = [
     "create_workspace",
     "decode_token",
     "generate_numeric_otp",
+    "get_descendants_ids",
     "get_entity_audit_logs",
     "get_user_role_in_workspace",
     "get_workspace_audit_logs",
@@ -43,5 +48,7 @@ __all__ = [
     "record_audit_event",
     "remove_member",
     "request_otp",
+    "validate_no_cycle",
     "verify_otp",
 ]
+

@@ -611,6 +611,7 @@ export const App: React.FC = () => {
           setEditingPerson(null);
         }}
         person={editingPerson}
+        allPeople={allPeople}
         onSave={handleSavePersonEdit}
         onDelete={handleDeletePerson}
       />

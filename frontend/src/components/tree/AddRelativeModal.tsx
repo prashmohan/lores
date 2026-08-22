@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Sparkles, UserCheck, UserPlus } from 'lucide-react';
 import type { PersonCreate, PersonRead, PersonSummary } from '../../types/api';
 import type { RelativeType } from './FocusPersonView';
+import { extractKnownPlaces, generateYearSuggestions } from '../../lib/autocomplete';
 
 interface AddRelativeModalProps {
   isOpen: boolean;
@@ -47,6 +48,9 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
   const [deathPlace, setDeathPlace] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const knownPlaces = useMemo(() => extractKnownPlaces(allPeople), [allPeople]);
+  const yearSuggestions = useMemo(() => generateYearSuggestions(), []);
 
   // Available existing people (excluding focusPerson)
   const availableExistingPeople = allPeople.filter(
@@ -400,6 +404,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                     <input
                       id="birth_date"
                       type="text"
+                      list="add-relative-years-list"
                       value={birthDate}
                       onChange={(e) => setBirthDate(e.target.value)}
                       placeholder="e.g. 1942 or 12 Apr 1942"
@@ -414,6 +419,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                     <input
                       id="birth_place"
                       type="text"
+                      list="add-relative-places-list"
                       value={birthPlace}
                       onChange={(e) => setBirthPlace(e.target.value)}
                       placeholder="e.g. New York, NY"
@@ -431,6 +437,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                       <input
                         id="death_date"
                         type="text"
+                        list="add-relative-years-list"
                         value={deathDate}
                         onChange={(e) => setDeathDate(e.target.value)}
                         placeholder="e.g. 2008"
@@ -445,6 +452,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                       <input
                         id="death_place"
                         type="text"
+                        list="add-relative-places-list"
                         value={deathPlace}
                         onChange={(e) => setDeathPlace(e.target.value)}
                         placeholder="e.g. Boston, MA"
@@ -453,6 +461,19 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Autocomplete Datalists */}
+                <datalist id="add-relative-years-list">
+                  {yearSuggestions.map((yr) => (
+                    <option key={yr} value={yr} />
+                  ))}
+                </datalist>
+
+                <datalist id="add-relative-places-list">
+                  {knownPlaces.map((pl) => (
+                    <option key={pl} value={pl} />
+                  ))}
+                </datalist>
               </>
             )}
 

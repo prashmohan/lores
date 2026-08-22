@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Trash2, AlertTriangle } from 'lucide-react';
-import type { PersonSummary, PersonUpdate } from '../../types/api';
+import type { PersonRead, PersonSummary, PersonUpdate } from '../../types/api';
+import { extractKnownPlaces, generateYearSuggestions } from '../../lib/autocomplete';
 
 interface EditPersonModalProps {
   isOpen: boolean;
   onClose: () => void;
   person: PersonSummary | null;
+  allPeople?: PersonRead[];
   onSave: (personId: string, updates: PersonUpdate) => Promise<void>;
   onDelete: (personId: string) => Promise<void>;
 }
@@ -15,6 +17,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   isOpen,
   onClose,
   person,
+  allPeople = [],
   onSave,
   onDelete,
 }) => {
@@ -28,6 +31,9 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   const [deathDate, setDeathDate] = useState('');
   const [deathPlace, setDeathPlace] = useState('');
   const [biography, setBiography] = useState('');
+
+  const knownPlaces = useMemo(() => extractKnownPlaces(allPeople), [allPeople]);
+  const yearSuggestions = useMemo(() => generateYearSuggestions(), []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -263,6 +269,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                   <input
                     id="edit_birth_date"
                     type="text"
+                    list="edit-person-years-list"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
                     placeholder="e.g. 1942 or 12 Apr 1942"
@@ -277,6 +284,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                   <input
                     id="edit_birth_place"
                     type="text"
+                    list="edit-person-places-list"
                     value={birthPlace}
                     onChange={(e) => setBirthPlace(e.target.value)}
                     placeholder="e.g. Boston, MA"
@@ -294,6 +302,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                     <input
                       id="edit_death_date"
                       type="text"
+                      list="edit-person-years-list"
                       value={deathDate}
                       onChange={(e) => setDeathDate(e.target.value)}
                       placeholder="e.g. 2018"
@@ -308,6 +317,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                     <input
                       id="edit_death_place"
                       type="text"
+                      list="edit-person-places-list"
                       value={deathPlace}
                       onChange={(e) => setDeathPlace(e.target.value)}
                       placeholder="e.g. Seattle, WA"
@@ -316,6 +326,19 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Autocomplete Datalists */}
+              <datalist id="edit-person-years-list">
+                {yearSuggestions.map((yr) => (
+                  <option key={yr} value={yr} />
+                ))}
+              </datalist>
+
+              <datalist id="edit-person-places-list">
+                {knownPlaces.map((pl) => (
+                  <option key={pl} value={pl} />
+                ))}
+              </datalist>
 
               <div>
                 <label htmlFor="edit_biography" className="block text-sm font-bold text-slate-800 mb-1">

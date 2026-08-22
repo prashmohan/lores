@@ -39,13 +39,14 @@ def add_relative(
     db: Session = Depends(get_db),
 ) -> Any:
     try:
-        person_data = req.person_payload
         new_person = person_service.add_relative_atomic(
             db,
             workspace_id=workspace_id,
             relative_type=req.relative_type,
             base_person_id=req.base_person_id,
-            person_data=person_data,
+            person_data=req.person_payload,
+            existing_person_id=req.existing_person_id,
+            other_parent_id=req.other_parent_id,
             actor=current_user,
         )
     except ValueError as e:

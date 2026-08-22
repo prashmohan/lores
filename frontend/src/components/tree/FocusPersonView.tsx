@@ -1,6 +1,6 @@
 import React from 'react';
 import { PersonCard } from './PersonCard';
-import type { FocusNeighborhoodResponse } from '../../types/api';
+import type { FocusNeighborhoodResponse, PersonSummary } from '../../types/api';
 
 export type RelativeType = 'parent' | 'partner' | 'child' | 'sibling';
 
@@ -8,12 +8,14 @@ interface FocusPersonViewProps {
   data: FocusNeighborhoodResponse;
   onSelectPerson: (id: string) => void;
   onAddRelative: (type: RelativeType) => void;
+  onEditPerson?: (person: PersonSummary) => void;
 }
 
 export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
   data,
   onSelectPerson,
   onAddRelative,
+  onEditPerson,
 }) => {
   return (
     <div className="flex flex-col items-center gap-8 py-8 max-w-5xl mx-auto px-4 select-none">
@@ -28,6 +30,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               key={parent.id}
               person={parent}
               onClick={() => onSelectPerson(parent.id)}
+              onEdit={onEditPerson}
             />
           ))}
           <button
@@ -55,6 +58,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 key={sibling.id}
                 person={sibling}
                 onClick={() => onSelectPerson(sibling.id)}
+                onEdit={onEditPerson}
               />
             ))}
             <button
@@ -74,7 +78,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
           <span className="text-xs font-extrabold uppercase tracking-widest text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300 mb-2">
             Focus Person
           </span>
-          <PersonCard person={data.focus_person} isFocus={true} />
+          <PersonCard person={data.focus_person} isFocus={true} onEdit={onEditPerson} />
         </div>
 
         {/* Spouse / Partner (Right Column) */}
@@ -88,6 +92,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 key={partner.id}
                 person={partner}
                 onClick={() => onSelectPerson(partner.id)}
+                onEdit={onEditPerson}
               />
             ))}
             <button
@@ -114,6 +119,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               key={child.id}
               person={child}
               onClick={() => onSelectPerson(child.id)}
+              onEdit={onEditPerson}
             />
           ))}
           <button

@@ -35,14 +35,13 @@ class FocusNeighborhoodResponse(BaseModel):
 class AddRelativeRequest(BaseModel):
     relative_type: str
     base_person_id: uuid.UUID
+    existing_person_id: uuid.UUID | None = None
+    other_parent_id: uuid.UUID | None = None
     person: PersonCreate | None = None
     person_data: PersonCreate | None = None
 
     model_config = ConfigDict(populate_by_name=True)
 
     @property
-    def person_payload(self) -> PersonCreate:
-        p = self.person or self.person_data
-        if not p:
-            raise ValueError("Person data is required")
-        return p
+    def person_payload(self) -> PersonCreate | None:
+        return self.person or self.person_data

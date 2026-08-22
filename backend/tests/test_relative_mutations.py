@@ -520,3 +520,79 @@ def test_person_service_crud_helpers(db_session):
     margaret_people = list_people(db_session, workspace_id, query="Margaret")
     assert len(margaret_people) == 1
     assert margaret_people[0].id == p2.id
+
+
+def test_add_child_with_both_parents(db_session):
+    workspace_id = uuid.uuid4()
+    actor = User(email="editor@example.com", display_name="Editor")
+    db_session.add(actor)
+    db_session.commit()
+
+    mother = Person(workspace_id=workspace_id, first_name="Margaret", last_name="Miller")
+    father = Person(workspace_id=workspace_id, first_name="George", last_name="Vance")
+    db_session.add_all([mother, father])
+    db_session.commit()
+
+    # Add child specifying mother as base and father as other_parent_id
+    child = add_relative_atomic(
+        db=db_session,
+        workspace_id=workspace_id,
+        relative_type="child",
+        base_person_id=mother.id,
+        other_parent_id=father.id,
+        person_data={"first_name": "David", "last_name": "Vance", "gender": "male"},
+        actor=actor,
+    )
+    db_session.commit()
+
+    # Verify union contains both mother and father
+    child_rel = db_session.scalar(
+        select(ChildRelationship).where(
+            ChildRelationship.workspace_id == workspace_id,
+            ChildRelationship.child_id == child.id,
+        )
+    )
+    assert child_rel is not None
+    union = db_session.get(FamilyUnion, child_rel.union_id)
+    assert union is not None
+    assert {union.partner1_id, union.partner2_id} == {mother.id, father.id}
+
+
+def test_add_parent_linking_existing_person(db_session):
+    workspace_id = uuid.uuid4()
+    actor = User(email="editor@example.com", display_name="Editor")
+    db_session.add(actor)
+    db_session.commit()
+
+    child = Person(workspace_id=workspace_id, first_name="Margaret", last_name="Miller")
+    mother = Person(workspace_id=workspace_id, first_name="Clara", last_name="Higgins")
+    father = Person(workspace_id=workspace_id, first_name="Arthur", last_name="Miller")
+    db_session.add_all([child, mother, father])
+    db_session.commit()
+
+    # Mother already linked as partner1
+    p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=mother.id)
+    db_session.add(p_union)
+    db_session.flush()
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id)
+    )
+    db_session.commit()
+
+    # Link existing father into child's parents
+    linked_father = add_relative_atomic(
+        db=db_session,
+        workspace_id=workspace_id,
+        relative_type="parent",
+        base_person_id=child.id,
+        existing_person_id=father.id,
+        actor=actor,
+    )
+    db_session.commit()
+    assert linked_father.id == father.id
+
+    # Union now has both Clara and Arthur
+    updated_union = db_session.get(FamilyUnion, p_union.id)
+    assert updated_union is not None
+    assert updated_union.partner1_id == mother.id
+    assert updated_union.partner2_id == father.id

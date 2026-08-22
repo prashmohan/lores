@@ -64,6 +64,15 @@ describe('PersonCard', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('calls onEdit handler when edit button is clicked', () => {
+    const onEdit = vi.fn();
+    render(<PersonCard person={mockPerson} onEdit={onEdit} />);
+
+    const editBtn = screen.getByRole('button', { name: /Edit details for Arthur Miller/i });
+    fireEvent.click(editBtn);
+    expect(onEdit).toHaveBeenCalledWith(mockPerson);
+  });
+
   it('applies focus styles when isFocus is true', () => {
     const { container } = render(<PersonCard person={mockPerson} isFocus={true} />);
     const card = container.firstChild as HTMLElement;

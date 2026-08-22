@@ -100,8 +100,10 @@ def add_relative_atomic(
     workspace_id: uuid.UUID,
     relative_type: str,  # "parent", "partner", "child", "sibling"
     base_person_id: uuid.UUID,
-    person_data: dict[str, Any] | PersonCreate,
-    actor: User,
+    person_data: dict[str, Any] | PersonCreate | None = None,
+    existing_person_id: uuid.UUID | None = None,
+    other_parent_id: uuid.UUID | None = None,
+    actor: User = None,  # type: ignore[assignment]
 ) -> Person:
     base = db.get(Person, base_person_id)
     if not base or base.workspace_id != workspace_id or base.is_deleted:
@@ -111,60 +113,132 @@ def add_relative_atomic(
     if relative_type not in allowed_types:
         raise ValueError(f"Unsupported relative type: {relative_type}")
 
-    data = person_data.model_dump() if isinstance(person_data, PersonCreate) else dict(person_data)
+    # 1. Resolve or create target person
+    if existing_person_id:
+        target_person = db.get(Person, existing_person_id)
+        if (
+            not target_person
+            or target_person.workspace_id != workspace_id
+            or target_person.is_deleted
+        ):
+            raise ValueError("Existing person not found in workspace")
+        if target_person.id == base.id:
+            raise ValueError("Cannot link a person to themselves")
+    else:
+        if not person_data:
+            raise ValueError("Either person_data or existing_person_id must be provided")
+        data = (
+            person_data.model_dump() if isinstance(person_data, PersonCreate) else dict(person_data)
+        )
+        target_person = Person(
+            workspace_id=workspace_id,
+            first_name=data["first_name"],
+            last_name=data.get("last_name") or base.last_name,
+            maiden_name=data.get("maiden_name"),
+            gender=data.get("gender", "unknown"),
+            is_living=data.get("is_living", True),
+            birth_date=data.get("birth_date"),
+            birth_date_qualifier=data.get("birth_date_qualifier", "exact"),
+            birth_place=data.get("birth_place"),
+            death_date=data.get("death_date"),
+            death_date_qualifier=data.get("death_date_qualifier", "exact"),
+            death_place=data.get("death_place"),
+            biography=data.get("biography"),
+            avatar_url=data.get("avatar_url"),
+        )
+        db.add(target_person)
+        db.flush()
 
-    # 1. Create new person record
-    new_person = Person(
-        workspace_id=workspace_id,
-        first_name=data["first_name"],
-        last_name=data.get("last_name") or base.last_name,
-        maiden_name=data.get("maiden_name"),
-        gender=data.get("gender", "unknown"),
-        is_living=data.get("is_living", True),
-        birth_date=data.get("birth_date"),
-        birth_date_qualifier=data.get("birth_date_qualifier", "exact"),
-        birth_place=data.get("birth_place"),
-        death_date=data.get("death_date"),
-        death_date_qualifier=data.get("death_date_qualifier", "exact"),
-        death_place=data.get("death_place"),
-        biography=data.get("biography"),
-        avatar_url=data.get("avatar_url"),
-    )
-    db.add(new_person)
-    db.flush()
-
-    record_audit_event(
-        db,
-        workspace_id,
-        actor.id,
-        actor.display_name,
-        actor.email,
-        "Person",
-        new_person.id,
-        "CREATE",
-        {"person": f"{new_person.first_name} {new_person.last_name}"},
-    )
+        if actor:
+            record_audit_event(
+                db,
+                workspace_id,
+                actor.id,
+                actor.display_name,
+                actor.email,
+                "Person",
+                target_person.id,
+                "CREATE",
+                {"person": f"{target_person.first_name} {target_person.last_name}"},
+            )
 
     # 2. Connect based on relative_type
     if relative_type == "parent":
-        # Check if base person already has a parent union
-        parent_rel_stmt = select(ChildRelationship.union_id).where(
-            ChildRelationship.workspace_id == workspace_id,
-            ChildRelationship.child_id == base_person_id,
-            ChildRelationship.is_deleted.is_(False),
-        )
-        existing_union_id = db.scalar(parent_rel_stmt)
-        if existing_union_id:
-            union = db.get(FamilyUnion, existing_union_id)
-            if union and not union.is_deleted:
-                if not union.partner1_id:
-                    union.partner1_id = new_person.id
-                    validate_no_cycle(db, workspace_id, union.id, base_person_id)
-                elif not union.partner2_id and union.partner1_id != new_person.id:
-                    union.partner2_id = new_person.id
-                    validate_no_cycle(db, workspace_id, union.id, base_person_id)
+        if other_parent_id:
+            other_p = db.get(Person, other_parent_id)
+            if not other_p or other_p.workspace_id != workspace_id or other_p.is_deleted:
+                raise ValueError("Other parent not found in workspace")
+            parent_union_stmt = select(FamilyUnion).where(
+                FamilyUnion.workspace_id == workspace_id,
+                FamilyUnion.is_deleted.is_(False),
+                or_(
+                    (FamilyUnion.partner1_id == target_person.id)
+                    & (FamilyUnion.partner2_id == other_parent_id),
+                    (FamilyUnion.partner1_id == other_parent_id)
+                    & (FamilyUnion.partner2_id == target_person.id),
+                ),
+            )
+            parent_union = db.scalar(parent_union_stmt)
+            if not parent_union:
+                parent_union = FamilyUnion(
+                    workspace_id=workspace_id,
+                    partner1_id=target_person.id,
+                    partner2_id=other_parent_id,
+                )
+                db.add(parent_union)
+                db.flush()
+            validate_no_cycle(db, workspace_id, parent_union.id, base_person_id)
+            existing_rel = db.scalar(
+                select(ChildRelationship).where(
+                    ChildRelationship.workspace_id == workspace_id,
+                    ChildRelationship.union_id == parent_union.id,
+                    ChildRelationship.child_id == base_person_id,
+                    ChildRelationship.is_deleted.is_(False),
+                )
+            )
+            if not existing_rel:
+                db.add(
+                    ChildRelationship(
+                        workspace_id=workspace_id,
+                        union_id=parent_union.id,
+                        child_id=base_person_id,
+                    )
+                )
+        else:
+            parent_rel_stmt = select(ChildRelationship.union_id).where(
+                ChildRelationship.workspace_id == workspace_id,
+                ChildRelationship.child_id == base_person_id,
+                ChildRelationship.is_deleted.is_(False),
+            )
+            existing_union_id = db.scalar(parent_rel_stmt)
+            if existing_union_id:
+                union = db.get(FamilyUnion, existing_union_id)
+                if union and not union.is_deleted:
+                    if not union.partner1_id:
+                        union.partner1_id = target_person.id
+                        validate_no_cycle(db, workspace_id, union.id, base_person_id)
+                    elif not union.partner2_id and union.partner1_id != target_person.id:
+                        union.partner2_id = target_person.id
+                        validate_no_cycle(db, workspace_id, union.id, base_person_id)
+                    elif (
+                        union.partner1_id != target_person.id
+                        and union.partner2_id != target_person.id
+                    ):
+                        new_union = FamilyUnion(
+                            workspace_id=workspace_id, partner1_id=target_person.id
+                        )
+                        db.add(new_union)
+                        db.flush()
+                        validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
+                        db.add(
+                            ChildRelationship(
+                                workspace_id=workspace_id,
+                                union_id=new_union.id,
+                                child_id=base_person_id,
+                            )
+                        )
                 else:
-                    new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
+                    new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=target_person.id)
                     db.add(new_union)
                     db.flush()
                     validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
@@ -176,7 +250,7 @@ def add_relative_atomic(
                         )
                     )
             else:
-                new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
+                new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=target_person.id)
                 db.add(new_union)
                 db.flush()
                 validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
@@ -187,50 +261,85 @@ def add_relative_atomic(
                         child_id=base_person_id,
                     )
                 )
-        else:
-            new_union = FamilyUnion(workspace_id=workspace_id, partner1_id=new_person.id)
-            db.add(new_union)
+
+    elif relative_type == "partner":
+        existing_partner_union = db.scalar(
+            select(FamilyUnion).where(
+                FamilyUnion.workspace_id == workspace_id,
+                FamilyUnion.is_deleted.is_(False),
+                or_(
+                    (FamilyUnion.partner1_id == base_person_id)
+                    & (FamilyUnion.partner2_id == target_person.id),
+                    (FamilyUnion.partner1_id == target_person.id)
+                    & (FamilyUnion.partner2_id == base_person_id),
+                ),
+            )
+        )
+        if not existing_partner_union:
+            partner_union = FamilyUnion(
+                workspace_id=workspace_id,
+                partner1_id=base_person_id,
+                partner2_id=target_person.id,
+            )
+            db.add(partner_union)
             db.flush()
-            validate_no_cycle(db, workspace_id, new_union.id, base_person_id)
+
+    elif relative_type == "child":
+        if other_parent_id:
+            other_p = db.get(Person, other_parent_id)
+            if not other_p or other_p.workspace_id != workspace_id or other_p.is_deleted:
+                raise ValueError("Other parent not found in workspace")
+            child_union_stmt = select(FamilyUnion).where(
+                FamilyUnion.workspace_id == workspace_id,
+                FamilyUnion.is_deleted.is_(False),
+                or_(
+                    (FamilyUnion.partner1_id == base_person_id)
+                    & (FamilyUnion.partner2_id == other_parent_id),
+                    (FamilyUnion.partner1_id == other_parent_id)
+                    & (FamilyUnion.partner2_id == base_person_id),
+                ),
+            )
+            child_union = db.scalar(child_union_stmt)
+            if not child_union:
+                child_union = FamilyUnion(
+                    workspace_id=workspace_id,
+                    partner1_id=base_person_id,
+                    partner2_id=other_parent_id,
+                )
+                db.add(child_union)
+                db.flush()
+        else:
+            child_union_stmt = select(FamilyUnion).where(
+                FamilyUnion.workspace_id == workspace_id,
+                FamilyUnion.is_deleted.is_(False),
+                (FamilyUnion.partner1_id == base_person_id)
+                | (FamilyUnion.partner2_id == base_person_id),
+            )
+            child_union = db.scalar(child_union_stmt)
+            if not child_union:
+                child_union = FamilyUnion(workspace_id=workspace_id, partner1_id=base_person_id)
+                db.add(child_union)
+                db.flush()
+
+        validate_no_cycle(db, workspace_id, child_union.id, target_person.id)
+        existing_child_rel = db.scalar(
+            select(ChildRelationship).where(
+                ChildRelationship.workspace_id == workspace_id,
+                ChildRelationship.union_id == child_union.id,
+                ChildRelationship.child_id == target_person.id,
+                ChildRelationship.is_deleted.is_(False),
+            )
+        )
+        if not existing_child_rel:
             db.add(
                 ChildRelationship(
                     workspace_id=workspace_id,
-                    union_id=new_union.id,
-                    child_id=base_person_id,
+                    union_id=child_union.id,
+                    child_id=target_person.id,
                 )
             )
 
-    elif relative_type == "partner":
-        partner_union = FamilyUnion(
-            workspace_id=workspace_id,
-            partner1_id=base_person_id,
-            partner2_id=new_person.id,
-        )
-        db.add(partner_union)
-        db.flush()
-
-    elif relative_type == "child":
-        # Find or create a union for base_person
-        child_union_stmt = select(FamilyUnion).where(
-            FamilyUnion.workspace_id == workspace_id,
-            FamilyUnion.is_deleted.is_(False),
-            (FamilyUnion.partner1_id == base_person_id)
-            | (FamilyUnion.partner2_id == base_person_id),
-        )
-        child_union = db.scalar(child_union_stmt)
-        if not child_union:
-            child_union = FamilyUnion(workspace_id=workspace_id, partner1_id=base_person_id)
-            db.add(child_union)
-            db.flush()
-        validate_no_cycle(db, workspace_id, child_union.id, new_person.id)
-        db.add(
-            ChildRelationship(
-                workspace_id=workspace_id, union_id=child_union.id, child_id=new_person.id
-            )
-        )
-
     elif relative_type == "sibling":
-        # Attach to same parent union as base_person
         sibling_rel_stmt = select(ChildRelationship.union_id).where(
             ChildRelationship.workspace_id == workspace_id,
             ChildRelationship.child_id == base_person_id,
@@ -238,7 +347,6 @@ def add_relative_atomic(
         )
         sibling_union_id = db.scalar(sibling_rel_stmt)
         if not sibling_union_id:
-            # Create a generic parent union
             p_union = FamilyUnion(workspace_id=workspace_id)
             db.add(p_union)
             db.flush()
@@ -250,16 +358,25 @@ def add_relative_atomic(
                 )
             )
             sibling_union_id = p_union.id
-        validate_no_cycle(db, workspace_id, sibling_union_id, new_person.id)
-        db.add(
-            ChildRelationship(
-                workspace_id=workspace_id,
-                union_id=sibling_union_id,
-                child_id=new_person.id,
+        validate_no_cycle(db, workspace_id, sibling_union_id, target_person.id)
+        existing_sib_rel = db.scalar(
+            select(ChildRelationship).where(
+                ChildRelationship.workspace_id == workspace_id,
+                ChildRelationship.union_id == sibling_union_id,
+                ChildRelationship.child_id == target_person.id,
+                ChildRelationship.is_deleted.is_(False),
             )
         )
+        if not existing_sib_rel:
+            db.add(
+                ChildRelationship(
+                    workspace_id=workspace_id,
+                    union_id=sibling_union_id,
+                    child_id=target_person.id,
+                )
+            )
 
-    return new_person
+    return target_person
 
 
 def update_person_optimistic(

@@ -7,11 +7,14 @@ import type {
   FocusNeighborhoodResponse,
   PersonCreate,
   PersonRead,
+  PersonSummary,
+  PersonUpdate,
 } from './types/api';
 import { Header } from './components/layout/Header';
 import { BreadcrumbBar, type BreadcrumbItem } from './components/layout/BreadcrumbBar';
 import { FocusPersonView, type RelativeType } from './components/tree/FocusPersonView';
 import { AddRelativeModal } from './components/tree/AddRelativeModal';
+import { EditPersonModal } from './components/tree/EditPersonModal';
 import { GuidedInterviewModal, type GuidedInterviewData } from './components/interview/GuidedInterviewModal';
 import { BirdseyeMapCanvas } from './components/map/BirdseyeMapCanvas';
 import { ActivityFeedModal } from './components/history/ActivityFeedModal';
@@ -46,6 +49,8 @@ export const App: React.FC = () => {
   // Modal states
   const [addRelativeType, setAddRelativeType] = useState<RelativeType | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<PersonSummary | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
@@ -254,13 +259,50 @@ export const App: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  // Submit new relative via form modal
-  const handleAddRelativeSubmit = async (type: RelativeType, personData: PersonCreate) => {
+  // Open edit person modal
+  const handleOpenEditPerson = (person: PersonSummary) => {
+    setEditingPerson(person);
+    setIsEditModalOpen(true);
+  };
+
+  // Save edited person
+  const handleSavePersonEdit = async (personId: string, updates: PersonUpdate) => {
+    if (!currentWorkspace) return;
+    await api.people.update(currentWorkspace.id, personId, updates);
+    await refreshPeopleList();
+    if (focusNeighborhood) {
+      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+    }
+  };
+
+  // Delete person (soft-delete to 30-day trash)
+  const handleDeletePerson = async (personId: string) => {
+    if (!currentWorkspace) return;
+    await api.people.delete(currentWorkspace.id, personId);
+    await refreshPeopleList();
+    const remainingPeople = allPeople.filter((p) => p.id !== personId);
+    if (remainingPeople.length > 0) {
+      await loadFocusNeighborhood(currentWorkspace.id, remainingPeople[0].id, false);
+    } else {
+      setFocusNeighborhood(null);
+      setFocusHistory([]);
+    }
+  };
+
+  // Submit relative via form modal (new or existing, with optional other parent)
+  const handleAddRelativeSubmit = async (
+    type: RelativeType,
+    personData?: PersonCreate,
+    existingPersonId?: string,
+    otherParentId?: string
+  ) => {
     if (!currentWorkspace || !focusNeighborhood) return;
     await api.tree.addRelative(currentWorkspace.id, {
       relative_type: type,
       base_person_id: focusNeighborhood.focus_person.id,
       person_data: personData,
+      existing_person_id: existingPersonId,
+      other_parent_id: otherParentId,
     });
 
     await refreshPeopleList();
@@ -469,6 +511,7 @@ export const App: React.FC = () => {
             data={focusNeighborhood}
             onSelectPerson={handleSelectPerson}
             onAddRelative={handleOpenAddRelative}
+            onEditPerson={handleOpenEditPerson}
           />
         )}
 
@@ -554,7 +597,22 @@ export const App: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         relativeType={addRelativeType}
         focusPerson={focusNeighborhood?.focus_person || null}
+        partners={focusNeighborhood?.partners || []}
+        existingParents={focusNeighborhood?.parents || []}
+        allPeople={allPeople}
         onSubmit={handleAddRelativeSubmit}
+      />
+
+      {/* Edit Person Modal */}
+      <EditPersonModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingPerson(null);
+        }}
+        person={editingPerson}
+        onSave={handleSavePersonEdit}
+        onDelete={handleDeletePerson}
       />
 
       {/* Guided Conversational Interview Modal */}

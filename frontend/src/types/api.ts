@@ -140,6 +140,8 @@ export interface PersonRead {
 export interface AddRelativeRequest {
   relative_type: 'parent' | 'partner' | 'child' | 'sibling' | string;
   base_person_id: string;
+  existing_person_id?: string;
+  other_parent_id?: string;
   person?: PersonCreate;
   person_data?: PersonCreate;
 }

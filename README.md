@@ -153,28 +153,40 @@ The frontend will start at `http://localhost:5173`. Requests to `/api/*` are aut
 
 ### 5.4 Running with Docker & Docker Compose
 
-Lores includes complete containerization with production-ready multi-stage Docker builds.
+#### A. Development Mode with Docker Compose Watch (Live Hot-Reloading)
 
-The host port can be configured in your `.env` file via `APP_PORT` (default: `3000`):
+Lores includes a dedicated `docker-compose.dev.yml` file configured with `docker compose watch` (`develop.watch`). This enables:
+- **Instant Frontend Hot Module Replacement (HMR)**: Any edits in `frontend/src/` or `frontend/public/` sync immediately into the running container without rebuilding.
+- **Backend Auto-Reloading**: Python changes in `backend/app/` sync automatically, and Uvicorn reloads instantly.
+- **Automatic Rebuilds**: Dependency file modifications (`package.json`, `requirements.txt`) trigger automatic container rebuilds.
+
+```bash
+# Launch development containers with live file sync and watch
+docker compose -f docker-compose.dev.yml up --watch
+```
+
+#### B. Production Multi-Stage Container Build
+
+For a production-ready containerized environment:
 
 ```bash
 # 1. Copy the environment configuration template
 cp .env.example .env
 
-# 2. Optionally adjust APP_PORT in .env (e.g. APP_PORT=5000 or APP_PORT=8080)
+# 2. Optionally adjust APP_PORT in .env (e.g. APP_PORT=8156)
 
 # 3. Build and launch all services
 docker compose up --build
 ```
 
-- **Web Application & UI**: Accessible at `http://localhost:${APP_PORT:-3000}` (e.g. [`http://localhost:3000`](http://localhost:3000)).
-- **Interactive OpenAPI Documentation**: Accessible at `http://localhost:${APP_PORT:-3000}/docs` (e.g. [`http://localhost:3000/docs`](http://localhost:3000/docs)).
-- **Zero Host Port Conflicts**: The backend API is routed through Nginx internally; port 8000 on your host is completely untouched.
-- **Persistent Data Storage**: Database records are safely persisted in the named Docker volume `lores_data`.
+- **Web Application & UI**: Accessible at `http://localhost:${APP_PORT:-8156}` (e.g. [`http://localhost:8156`](http://localhost:8156)).
+- **Zero Host Port Conflicts**: All traffic is routed through the single exposed `APP_PORT`; backend port 8000 remains internal to Docker.
+- **Persistent Data Storage**: SQLite database records are safely persisted in the named Docker volume `lores_data` (or `lores_dev_data` in dev mode).
 
 To stop the containers:
 ```bash
-docker compose down
+docker compose -f docker-compose.dev.yml down  # for dev
+docker compose down                            # for prod
 ```
 
 ---

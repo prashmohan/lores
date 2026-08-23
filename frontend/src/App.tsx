@@ -413,6 +413,16 @@ export const App: React.FC = () => {
     await initWorkspaceTree(newWs);
   };
 
+  // Workspace metadata updated handler
+  const handleWorkspaceUpdated = (updated: WorkspaceRead) => {
+    setCurrentWorkspace(updated);
+    setWorkspaces((prev) =>
+      prev.map((item) =>
+        item.workspace.id === updated.id ? { ...item, workspace: updated } : item
+      )
+    );
+  };
+
   // Open workspace from super admin dashboard
   const handleSelectWorkspaceFromAdmin = async (workspaceId: string) => {
     const existing = workspaces.find((w) => w.workspace.id === workspaceId);
@@ -433,13 +443,13 @@ export const App: React.FC = () => {
     const lastName = (formData.get('last_name') as string)?.trim();
     const birthDate = (formData.get('birth_date') as string)?.trim();
 
-    if (!firstName || !lastName) return;
+    if (!firstName) return;
 
     setTreeLoading(true);
     try {
       const newPerson = await api.people.create(currentWorkspace.id, {
         first_name: firstName,
-        last_name: lastName,
+        last_name: lastName || undefined,
         birth_date: birthDate || undefined,
         is_living: true,
       });
@@ -845,6 +855,7 @@ export const App: React.FC = () => {
             onSelectPerson={handleSelectPerson}
             onAddRelative={handleOpenAddRelative}
             onEditPerson={handleOpenEditPerson}
+            onEditPhoto={!isViewer ? handleOpenEditPerson : undefined}
             workspaceId={currentWorkspace.id}
           />
         )}
@@ -905,13 +916,12 @@ export const App: React.FC = () => {
 
                   <div>
                     <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-900 mb-1">
-                      Last Name <span className="text-red-500">*</span>
+                      Last Name <span className="text-xs text-slate-500 font-normal">(Optional)</span>
                     </label>
                     <input
                       id="root_last_name"
                       name="last_name"
                       type="text"
-                      required
                       placeholder="e.g. Miller"
                       className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base font-semibold transition-all outline-none"
                     />
@@ -986,7 +996,9 @@ export const App: React.FC = () => {
           onClose={() => setIsMembersOpen(false)}
           workspaceId={currentWorkspace.id}
           workspaceName={currentWorkspace.name}
+          workspaceDescription={currentWorkspace.description}
           currentUserId={currentUser?.id}
+          onWorkspaceUpdated={handleWorkspaceUpdated}
         />
       )}
 

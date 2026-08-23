@@ -17,6 +17,7 @@ from app.schemas.workspace import (
     WorkspaceMemberCreate,
     WorkspaceMemberRead,
     WorkspaceRead,
+    WorkspaceUpdate,
 )
 from app.services import email_service, workspace_service
 
@@ -61,6 +62,28 @@ def get_workspace(
     ws = workspace_service.get_workspace_by_id(db, workspace_id)
     if not ws:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return ws
+
+
+@router.patch("/{workspace_id}", response_model=WorkspaceRead)
+def update_workspace(
+    workspace_id: uuid.UUID,
+    req: WorkspaceUpdate,
+    _role: str = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+) -> Any:
+    try:
+        ws = workspace_service.update_workspace(db, workspace_id=workspace_id, updates=req)
+    except ValueError as e:
+        status_code = (
+            status.HTTP_404_NOT_FOUND
+            if "not found" in str(e).lower()
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
+
+    db.commit()
+    db.refresh(ws)
     return ws
 
 

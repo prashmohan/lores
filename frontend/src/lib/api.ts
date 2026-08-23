@@ -27,6 +27,7 @@ import type {
   WorkspaceCreate,
   WorkspaceMemberRead,
   WorkspaceRead,
+  WorkspaceUpdate,
 } from '../types/api';
 
 const API_BASE = '/api/v1';
@@ -210,6 +211,12 @@ export const api = {
 
     get: (workspaceId: string): Promise<WorkspaceRead> =>
       request<WorkspaceRead>(`/workspaces/${workspaceId}`),
+
+    update: (workspaceId: string, data: WorkspaceUpdate): Promise<WorkspaceRead> =>
+      request<WorkspaceRead>(`/workspaces/${workspaceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
 
     listMembers: (workspaceId: string): Promise<WorkspaceMemberRead[]> =>
       request<WorkspaceMemberRead[]>(`/workspaces/${workspaceId}/members`),

@@ -37,6 +37,7 @@ from app.services.workspace_service import (
     list_user_workspaces,
     list_workspace_members,
     remove_member,
+    update_workspace,
 )
 
 _ = models
@@ -592,3 +593,112 @@ def test_map_layout_api_lifecycle_and_rbac(client: TestClient) -> None:
     get_after_del = client.get(f"/api/v1/workspaces/{ws_id}/map-layout", headers=viewer_headers)
     assert get_after_del.status_code == 200
     assert get_after_del.json() == {"positions": {}}
+
+
+def test_update_workspace_service(db_session):
+    user = User(email="editor@example.com", display_name="Editor")
+    db_session.add(user)
+    db_session.commit()
+
+    ws = create_workspace(
+        db_session, name="Original Name", user_id=user.id, description="Original Desc"
+    )
+    db_session.commit()
+
+    # 1. Update name only
+    updated = update_workspace(db_session, ws.id, WorkspaceUpdate(name="New Family Name"))
+    db_session.commit()
+    assert updated.name == "New Family Name"
+    assert updated.description == "Original Desc"
+
+    # 2. Update description only
+    updated = update_workspace(
+        db_session, ws.id, WorkspaceUpdate(description="Updated lineage notes")
+    )
+    db_session.commit()
+    assert updated.name == "New Family Name"
+    assert updated.description == "Updated lineage notes"
+
+    # 3. Clear description with empty string
+    updated = update_workspace(db_session, ws.id, WorkspaceUpdate(description="   "))
+    db_session.commit()
+    assert updated.description is None
+
+    # 4. Reject empty or whitespace-only name
+    with pytest.raises(ValueError, match="Workspace name cannot be empty"):
+        update_workspace(db_session, ws.id, WorkspaceUpdate(name="   "))
+
+    # 5. Non-existent workspace raises ValueError
+    with pytest.raises(ValueError, match="Workspace not found"):
+        update_workspace(db_session, uuid.uuid4(), WorkspaceUpdate(name="Ghost"))
+
+
+def test_update_workspace_api_lifecycle_and_rbac(client: TestClient) -> None:
+    admin_headers = helper_login(client, "tree_admin@example.com", "Tree Admin")
+    collab_headers = helper_login(client, "tree_collab@example.com", "Tree Collab")
+    viewer_headers = helper_login(client, "tree_viewer@example.com", "Tree Viewer")
+
+    # 1. Admin creates workspace
+    ws_resp = client.post(
+        "/api/v1/workspaces",
+        headers=admin_headers,
+        json={"name": "Initial Tree", "description": "Initial Story"},
+    )
+    assert ws_resp.status_code == 200
+    ws_id = ws_resp.json()["id"]
+
+    # 2. Add collaborator and viewer
+    client.post(
+        f"/api/v1/workspaces/{ws_id}/members",
+        headers=admin_headers,
+        json={"email": "tree_collab@example.com", "role": "collaborator"},
+    )
+    client.post(
+        f"/api/v1/workspaces/{ws_id}/members",
+        headers=admin_headers,
+        json={"email": "tree_viewer@example.com", "role": "viewer"},
+    )
+
+    # 3. Viewer attempts PATCH -> 403 Forbidden
+    viewer_patch = client.patch(
+        f"/api/v1/workspaces/{ws_id}",
+        headers=viewer_headers,
+        json={"name": "Viewer Hacked Name"},
+    )
+    assert viewer_patch.status_code == 403
+
+    # 4. Collaborator attempts PATCH -> 403 Forbidden
+    collab_patch = client.patch(
+        f"/api/v1/workspaces/{ws_id}",
+        headers=collab_headers,
+        json={"name": "Collab Rename Attempt"},
+    )
+    assert collab_patch.status_code == 403
+
+    # 5. Admin updates name and description successfully
+    admin_patch = client.patch(
+        f"/api/v1/workspaces/{ws_id}",
+        headers=admin_headers,
+        json={"name": "Renamed Miller Tree", "description": "Generations 1 to 5"},
+    )
+    assert admin_patch.status_code == 200
+    data = admin_patch.json()
+    assert data["name"] == "Renamed Miller Tree"
+    assert data["description"] == "Generations 1 to 5"
+
+    # 6. Admin sends invalid empty name -> 400 Bad Request
+    invalid_patch = client.patch(
+        f"/api/v1/workspaces/{ws_id}",
+        headers=admin_headers,
+        json={"name": "   "},
+    )
+    assert invalid_patch.status_code == 400
+
+    # 7. Non-member / non-existent workspace access -> 403 Forbidden
+    random_id = str(uuid.uuid4())
+    missing_patch = client.patch(
+        f"/api/v1/workspaces/{random_id}",
+        headers=admin_headers,
+        json={"name": "Does Not Exist"},
+    )
+    assert missing_patch.status_code == 403

@@ -129,4 +129,87 @@ describe('FamilyMembersModal', () => {
       expect(removeMemberSpy).toHaveBeenCalledWith('ws-1', 'u-2');
     });
   });
+
+  it('renders tree details with initial name and description and allows editing', async () => {
+    const updateWorkspaceSpy = vi.spyOn(api.workspaces, 'update').mockResolvedValue({
+      id: 'ws-1',
+      name: 'The Arthur Miller Lineage',
+      slug: 'miller-family-123',
+      description: 'Documenting the Miller family ancestors',
+      created_by_user_id: 'u-1',
+      created_at: '2026-08-20T00:00:00Z',
+      updated_at: '2026-08-24T00:00:00Z',
+    });
+
+    const onWorkspaceUpdated = vi.fn();
+
+    render(
+      <FamilyMembersModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        workspaceName="Miller Family"
+        workspaceDescription="Original description"
+        currentUserId="u-1"
+        onWorkspaceUpdated={onWorkspaceUpdated}
+      />
+    );
+
+    // Verify fields populated
+    const nameInput = screen.getByLabelText(/Tree Name|Family Tree Name/i) as HTMLInputElement;
+    expect(nameInput).toBeInTheDocument();
+    expect(nameInput.value).toBe('Miller Family');
+
+    const descInput = screen.getByLabelText(/Description/i) as HTMLTextAreaElement;
+    expect(descInput).toBeInTheDocument();
+    expect(descInput.value).toBe('Original description');
+
+    // Change name and description
+    fireEvent.change(nameInput, { target: { value: 'The Arthur Miller Lineage' } });
+    fireEvent.change(descInput, { target: { value: 'Documenting the Miller family ancestors' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Save Tree Details|Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(updateWorkspaceSpy).toHaveBeenCalledWith('ws-1', {
+        name: 'The Arthur Miller Lineage',
+        description: 'Documenting the Miller family ancestors',
+      });
+      expect(onWorkspaceUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'ws-1',
+          name: 'The Arthur Miller Lineage',
+          description: 'Documenting the Miller family ancestors',
+        })
+      );
+      expect(screen.getByText(/Tree details updated successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays an error message when saving tree details fails', async () => {
+    vi.spyOn(api.workspaces, 'update').mockRejectedValue(new Error('Network error'));
+
+    render(
+      <FamilyMembersModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        workspaceName="Miller Family"
+        workspaceDescription="Original description"
+        currentUserId="u-1"
+      />
+    );
+
+    const nameInput = screen.getByLabelText(/Tree Name|Family Tree Name/i);
+    fireEvent.change(nameInput, { target: { value: 'Updated Family' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Save Tree Details|Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Network error|Failed to update tree details/i)).toBeInTheDocument();
+    });
+  });
 });
+

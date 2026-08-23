@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.workspace import Workspace, WorkspaceMember, slugify
+from app.schemas.workspace import WorkspaceUpdate
 
 VALID_WORKSPACE_ROLES = {"viewer", "collaborator", "admin"}
 
@@ -178,3 +179,26 @@ def has_sufficient_permission(user_role: str | None, required_role: str) -> bool
     if not user_role:
         return False
     return ROLE_HIERARCHY.get(user_role, 0) >= ROLE_HIERARCHY.get(required_role, 0)
+
+
+def update_workspace(
+    db: Session,
+    workspace_id: uuid.UUID,
+    updates: WorkspaceUpdate,
+) -> Workspace:
+    workspace = get_workspace_by_id(db, workspace_id)
+    if not workspace:
+        raise ValueError("Workspace not found")
+
+    if updates.name is not None:
+        clean_name = updates.name.strip()
+        if not clean_name:
+            raise ValueError("Workspace name cannot be empty")
+        workspace.name = clean_name
+
+    if updates.description is not None:
+        clean_desc = updates.description.strip()
+        workspace.description = clean_desc if clean_desc else None
+
+    db.flush()
+    return workspace

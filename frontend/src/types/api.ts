@@ -53,6 +53,11 @@ export interface WorkspaceCreate {
   description?: string | null;
 }
 
+export interface WorkspaceUpdate {
+  name?: string | null;
+  description?: string | null;
+}
+
 export interface WorkspaceMemberRead {
   id: string;
   workspace_id: string;
@@ -72,7 +77,7 @@ export interface UserWorkspaceMembership {
 export interface PersonSummary {
   id: string;
   first_name: string;
-  last_name: string;
+  last_name?: string | null;
   maiden_name?: string | null;
   gender: string;
   is_living: boolean;
@@ -94,7 +99,7 @@ export interface FocusNeighborhoodResponse {
 
 export interface PersonCreate {
   first_name: string;
-  last_name: string;
+  last_name?: string | null;
   maiden_name?: string | null;
   gender?: string;
   is_living?: boolean;
@@ -110,7 +115,7 @@ export interface PersonCreate {
 
 export interface PersonUpdate {
   first_name?: string;
-  last_name?: string;
+  last_name?: string | null;
   maiden_name?: string | null;
   gender?: string;
   is_living?: boolean;
@@ -128,7 +133,7 @@ export interface PersonRead {
   id: string;
   workspace_id: string;
   first_name: string;
-  last_name: string;
+  last_name?: string | null;
   maiden_name?: string | null;
   gender: string;
   is_living: boolean;

@@ -1,15 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Users, UserPlus, Trash2, Loader2, ShieldCheck, Edit3, Eye, CheckCircle2 } from 'lucide-react';
+import {
+  X,
+  Users,
+  UserPlus,
+  Trash2,
+  Loader2,
+  ShieldCheck,
+  Edit3,
+  Eye,
+  CheckCircle2,
+  TreePine,
+  Save,
+} from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
-import type { WorkspaceMemberRead } from '../../types/api';
+import type { WorkspaceMemberRead, WorkspaceRead } from '../../types/api';
 
 interface FamilyMembersModalProps {
   isOpen: boolean;
   onClose: () => void;
   workspaceId: string;
   workspaceName: string;
+  workspaceDescription?: string | null;
   currentUserId?: string;
+  onWorkspaceUpdated?: (updated: WorkspaceRead) => void;
 }
 
 export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
@@ -17,8 +31,14 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
   onClose,
   workspaceId,
   workspaceName,
+  workspaceDescription,
   currentUserId,
+  onWorkspaceUpdated,
 }) => {
+  const [name, setName] = useState(workspaceName);
+  const [description, setDescription] = useState(workspaceDescription || '');
+  const [metadataLoading, setMetadataLoading] = useState(false);
+
   const [members, setMembers] = useState<WorkspaceMemberRead[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -50,13 +70,48 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setName(workspaceName);
+      setDescription(workspaceDescription || '');
       setSuccessMsg(null);
       setError(null);
       loadMembers();
     }
-  }, [isOpen, loadMembers]);
+  }, [isOpen, workspaceName, workspaceDescription, loadMembers]);
 
   if (!isOpen) return null;
+
+  const handleUpdateMetadata = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError('Family tree name cannot be empty.');
+      return;
+    }
+
+    setError(null);
+    setSuccessMsg(null);
+    setMetadataLoading(true);
+
+    try {
+      const updated = await api.workspaces.update(workspaceId, {
+        name: name.trim(),
+        description: description.trim() ? description.trim() : null,
+      });
+      setSuccessMsg('Tree details updated successfully.');
+      if (onWorkspaceUpdated) {
+        onWorkspaceUpdated(updated);
+      }
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to update tree details.');
+      }
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -216,6 +271,60 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto py-4 space-y-6">
+            {/* Tree Details Section */}
+            <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5">
+              <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 mb-3">
+                <TreePine className="w-4 h-4 text-amber-700" />
+                <span>Family Tree Details</span>
+              </h3>
+
+              <form onSubmit={handleUpdateMetadata} className="space-y-3">
+                <div>
+                  <label htmlFor="workspace_name" className="block text-xs font-bold text-slate-700 mb-1">
+                    Family Tree Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    id="workspace_name"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g., The Miller Family"
+                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-medium bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="workspace_description" className="block text-xs font-bold text-slate-700 mb-1">
+                    Description & Story Summary
+                  </label>
+                  <textarea
+                    id="workspace_description"
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="e.g., Preserving oral history and lineage across five generations."
+                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-medium bg-white resize-y"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={metadataLoading || !name.trim()}
+                    className="min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {metadataLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>{metadataLoading ? 'Saving...' : 'Save Tree Details'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
             {/* Invite Form */}
             <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2 mb-3">

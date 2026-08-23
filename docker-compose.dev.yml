@@ -22,6 +22,7 @@ services:
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL:-noreply@lores.family}
       - EMAILS_FROM_NAME=${EMAILS_FROM_NAME:-Lores Family Tree}
       - SMTP_TLS=${SMTP_TLS:-true}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
     volumes:
       - lores_data:/app/data
       - ./backend/app:/app/app

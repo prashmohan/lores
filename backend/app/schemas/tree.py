@@ -10,7 +10,7 @@ class PersonSummary(BaseModel):
 
     id: str
     first_name: str
-    last_name: str
+    last_name: str | None = None
     maiden_name: str | None = None
     gender: str
     is_living: bool

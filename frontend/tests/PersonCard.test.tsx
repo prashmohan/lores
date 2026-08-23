@@ -98,4 +98,52 @@ describe('PersonCard', () => {
     expect(clickableHeading.className).not.toContain('truncate');
     expect(clickableHeading.className).toContain('break-words');
   });
+
+  it('renders avatar image when avatar_url is present', () => {
+    const personWithAvatar: PersonSummary = {
+      ...mockPerson,
+      avatar_url: 'data:image/jpeg;base64,samplephoto',
+    };
+
+    render(<PersonCard person={personWithAvatar} />);
+    const img = screen.getByRole('img', { name: 'Arthur Miller' });
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'data:image/jpeg;base64,samplephoto');
+  });
+
+  it('falls back to initials when avatar image fails to load', () => {
+    const personWithAvatar: PersonSummary = {
+      ...mockPerson,
+      avatar_url: 'https://example.com/broken-photo.jpg',
+    };
+
+    render(<PersonCard person={personWithAvatar} />);
+    const img = screen.getByRole('img', { name: 'Arthur Miller' });
+    fireEvent.error(img);
+
+    // After image error, initials should be visible
+    expect(screen.getByText('AM')).toBeInTheDocument();
+  });
+
+  it('renders quick photo edit button when onEditPhoto is provided', () => {
+    const onEditPhoto = vi.fn();
+    render(<PersonCard person={mockPerson} onEditPhoto={onEditPhoto} />);
+
+    const photoBtn = screen.getByRole('button', { name: /Change photo for Arthur Miller/i });
+    fireEvent.click(photoBtn);
+    expect(onEditPhoto).toHaveBeenCalledWith(mockPerson);
+  });
+
+  it('renders correctly for person without last name (mononym)', () => {
+    const mononymPerson: PersonSummary = {
+      id: 'mono-1',
+      first_name: 'Plato',
+      gender: 'male',
+      is_living: false,
+    };
+
+    render(<PersonCard person={mononymPerson} />);
+    expect(screen.getByText('Plato')).toBeInTheDocument();
+    expect(screen.getByText('P')).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pencil } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Pencil, Camera } from 'lucide-react';
 import type { PersonSummary } from '../../types/api';
 
 export type Person = PersonSummary;
@@ -9,6 +9,7 @@ interface PersonCardProps {
   isFocus?: boolean;
   onClick?: () => void;
   onEdit?: (person: PersonSummary) => void;
+  onEditPhoto?: (person: PersonSummary) => void;
   className?: string;
 }
 
@@ -17,12 +18,20 @@ export const PersonCard: React.FC<PersonCardProps> = ({
   isFocus = false,
   onClick,
   onEdit,
+  onEditPhoto,
   className = '',
 }) => {
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [person.avatar_url]);
+
   const isClickable = !!onClick;
-  const fullName = `${person.first_name} ${person.last_name}${
+  const nameParts = [person.first_name, person.last_name].filter(Boolean).join(' ');
+  const fullName = `${nameParts}${
     person.maiden_name ? ` (née ${person.maiden_name})` : ''
-  }`;
+  }`.trim();
 
   const dateText = (() => {
     if (person.birth_date && person.death_date) {
@@ -37,7 +46,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
     return person.is_living ? 'Living' : 'Dates unknown';
   })();
 
-  const initials = `${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`.toUpperCase();
+  const initials = `${person.first_name?.[0] || ''}${person.last_name?.[0] || ''}`.toUpperCase() || '?';
 
   const baseClasses = `relative p-4 rounded-2xl text-left transition-all border-2 w-56 sm:w-64 shadow-xs ${
     isFocus
@@ -55,6 +64,37 @@ export const PersonCard: React.FC<PersonCardProps> = ({
     isFocus ? 'text-sm text-amber-900' : 'text-xs text-slate-600'
   }`;
 
+  const renderAvatar = () => {
+    if (person.avatar_url && !imageError) {
+      return (
+        <div className="relative shrink-0">
+          <img
+            src={person.avatar_url}
+            alt={fullName}
+            onError={() => setImageError(true)}
+            className={`w-10 h-10 rounded-xl object-cover border ${
+              isFocus ? 'border-amber-500 ring-2 ring-amber-300' : 'border-slate-200'
+            }`}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative shrink-0">
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs border ${
+            isFocus
+              ? 'bg-amber-500 text-slate-950 border-amber-600'
+              : 'bg-slate-100 text-slate-700 border-slate-200 group-hover:bg-amber-100 group-hover:text-amber-900 group-hover:border-amber-300'
+          } transition-colors`}
+        >
+          {initials}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={baseClasses}>
       <div className="flex items-start justify-between gap-1 mb-2">
@@ -65,20 +105,36 @@ export const PersonCard: React.FC<PersonCardProps> = ({
         ) : (
           <span />
         )}
-        {onEdit && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(person);
-            }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-label={`Edit details for ${fullName}`}
-            title="Edit Details"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {onEditPhoto && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditPhoto(person);
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label={`Change photo for ${fullName}`}
+              title="Change Photo"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(person);
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label={`Edit details for ${fullName}`}
+              title="Edit Details"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {isClickable ? (
@@ -88,15 +144,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
           className="w-full text-left cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 rounded-xl group flex items-start gap-3"
           aria-label={`${person.relationship_label ? `${person.relationship_label}: ` : ''}${fullName}, ${dateText}`}
         >
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border ${
-              isFocus
-                ? 'bg-amber-500 text-slate-950 border-amber-600'
-                : 'bg-slate-100 text-slate-700 border-slate-200 group-hover:bg-amber-100 group-hover:text-amber-900 group-hover:border-amber-300'
-            } transition-colors`}
-          >
-            {initials}
-          </div>
+          {renderAvatar()}
           <div className="min-w-0 flex-1">
             <h3 className={`${nameClasses} group-hover:text-amber-900 transition-colors`}>{fullName}</h3>
             <p className={dateClasses}>{dateText}</p>
@@ -109,15 +157,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
         </button>
       ) : (
         <div className="flex items-start gap-3">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border ${
-              isFocus
-                ? 'bg-amber-500 text-slate-950 border-amber-600'
-                : 'bg-slate-100 text-slate-700 border-slate-200'
-            }`}
-          >
-            {initials}
-          </div>
+          {renderAvatar()}
           <div className="min-w-0 flex-1">
             <h3 className={nameClasses}>{fullName}</h3>
             <p className={dateClasses}>{dateText}</p>
@@ -143,3 +183,4 @@ export const PersonCard: React.FC<PersonCardProps> = ({
     </div>
   );
 };
+

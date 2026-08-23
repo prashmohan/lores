@@ -65,7 +65,7 @@ def create_person(
     person = Person(
         workspace_id=workspace_id,
         first_name=data["first_name"],
-        last_name=data["last_name"],
+        last_name=data.get("last_name"),
         maiden_name=data.get("maiden_name"),
         gender=data.get("gender", "unknown"),
         is_living=data.get("is_living", True),
@@ -90,7 +90,7 @@ def create_person(
         "Person",
         person.id,
         "CREATE",
-        {"person": f"{person.first_name} {person.last_name}"},
+        {"person": f"{person.first_name} {person.last_name or ''}".strip()},
     )
     return person
 
@@ -127,13 +127,19 @@ def add_relative_atomic(
     else:
         if not person_data:
             raise ValueError("Either person_data or existing_person_id must be provided")
-        data = (
-            person_data.model_dump() if isinstance(person_data, PersonCreate) else dict(person_data)
-        )
+        if isinstance(person_data, PersonCreate):
+            data = person_data.model_dump(exclude_unset=True)
+        else:
+            data = dict(person_data)
+
+        target_last_name = data.get("last_name")
+        if "last_name" not in data and relative_type in ("child", "sibling"):
+            target_last_name = base.last_name
+
         target_person = Person(
             workspace_id=workspace_id,
             first_name=data["first_name"],
-            last_name=data.get("last_name") or base.last_name,
+            last_name=target_last_name,
             maiden_name=data.get("maiden_name"),
             gender=data.get("gender", "unknown"),
             is_living=data.get("is_living", True),
@@ -159,7 +165,7 @@ def add_relative_atomic(
                 "Person",
                 target_person.id,
                 "CREATE",
-                {"person": f"{target_person.first_name} {target_person.last_name}"},
+                {"person": f"{target_person.first_name} {target_person.last_name or ''}".strip()},
             )
 
     # 2. Connect based on relative_type
@@ -389,8 +395,8 @@ def add_relative_atomic(
             {
                 "action": "add_relative",
                 "relationship_type": relative_type,
-                "base_person": f"{base.first_name} {base.last_name}",
-                "target_person": f"{target_person.first_name} {target_person.last_name}",
+                "base_person": f"{base.first_name} {base.last_name or ''}".strip(),
+                "target_person": f"{target_person.first_name} {target_person.last_name or ''}".strip(),
             },
         )
 
@@ -617,8 +623,8 @@ def remove_relationship_atomic(
             "DELETE",
             {
                 "action": "disconnect_partner",
-                "partner1": f"{base.first_name} {base.last_name}",
-                "partner2": f"{target.first_name} {target.last_name}",
+                "partner1": f"{base.first_name} {base.last_name or ''}".strip(),
+                "partner2": f"{target.first_name} {target.last_name or ''}".strip(),
             },
         )
         return {
@@ -720,8 +726,8 @@ def remove_relationship_atomic(
         "DELETE",
         {
             "action": "disconnect_parent_child",
-            "parent": f"{parent_person.first_name} {parent_person.last_name}",
-            "child": f"{child_person.first_name} {child_person.last_name}",
+            "parent": f"{parent_person.first_name} {parent_person.last_name or ''}".strip(),
+            "child": f"{child_person.first_name} {child_person.last_name or ''}".strip(),
         },
     )
 

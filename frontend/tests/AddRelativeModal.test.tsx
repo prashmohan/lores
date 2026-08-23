@@ -152,4 +152,37 @@ describe('AddRelativeModal', () => {
 
     expect(screen.queryByText(/Add Parent/i)).not.toBeInTheDocument();
   });
+
+  it('submits successfully without a last name', async () => {
+    const onClose = vi.fn();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <AddRelativeModal
+        isOpen={true}
+        onClose={onClose}
+        relativeType="parent"
+        focusPerson={mockFocusPerson}
+        onSubmit={onSubmit}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/First Name/i), { target: { value: 'Socrates' } });
+    fireEvent.change(screen.getByLabelText(/Last Name/i), { target: { value: '' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Parent/i }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        'parent',
+        expect.objectContaining({
+          first_name: 'Socrates',
+          last_name: undefined,
+        }),
+        undefined,
+        undefined
+      );
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

@@ -187,4 +187,29 @@ test.describe('Automated E2E Accessibility (WCAG 2.1 AA / AAA)', () => {
 
     expect(results.violations).toEqual([]);
   });
+
+  test('Edit Person and Photo Crop modal dialogs pass accessibility audit', async ({ page }) => {
+    await setupMockApi(page);
+    await page.goto('/');
+
+    // Click Edit Details on focus person
+    await page.getByRole('button', { name: /Edit Details/i }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    const editResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    expect(editResults.violations).toEqual([]);
+
+    // Open Photo Crop modal
+    await page.getByRole('button', { name: /Upload Photo/i }).click();
+    await expect(page.getByText(/Photo for/i)).toBeVisible();
+
+    const cropResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    expect(cropResults.violations).toEqual([]);
+  });
 });

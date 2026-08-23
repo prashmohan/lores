@@ -15,6 +15,8 @@ import { TrashCanModal } from '../src/components/history/TrashCanModal';
 import { LoginForm } from '../src/components/auth/LoginForm';
 import { VerifyOtpModal } from '../src/components/auth/VerifyOtpModal';
 import { Header } from '../src/components/layout/Header';
+import { EditPersonModal } from '../src/components/tree/EditPersonModal';
+import { PhotoCropModal } from '../src/components/tree/PhotoCropModal';
 import { api } from '../src/lib/api';
 
 import type { FocusNeighborhoodResponse, PersonSummary, UserRead, WorkspaceRead, UserWorkspaceMembership } from '../src/types/api';
@@ -284,6 +286,34 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
         onLogout={vi.fn()}
         highContrast={false}
         onToggleHighContrast={vi.fn()}
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('EditPersonModal passes axe accessibility audit', async () => {
+    const { container } = render(
+      <EditPersonModal
+        isOpen={true}
+        onClose={vi.fn()}
+        person={mockPerson}
+        onSave={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('PhotoCropModal passes axe accessibility audit', async () => {
+    const { container } = render(
+      <PhotoCropModal
+        isOpen={true}
+        onClose={vi.fn()}
+        personName="Margaret Miller"
+        currentAvatarUrl="data:image/jpeg;base64,samplephoto"
+        onSavePhoto={vi.fn()}
       />
     );
     const results = await axe(container);

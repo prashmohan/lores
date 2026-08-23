@@ -835,6 +835,40 @@ describe('BirdseyeMapCanvas', () => {
     expect(onSavePositions).toHaveBeenCalled();
     expect(onSelectPerson).not.toHaveBeenCalled();
   });
+
+  it('renders SVG clipPath and image elements when avatar_url is present on nodes and in toolbar', () => {
+    const peopleWithAvatar: MapPerson[] = [
+      {
+        ...mockPeople[0],
+        avatar_url: 'data:image/jpeg;base64,mapavatar1',
+      },
+      mockPeople[1],
+    ];
+
+    const { container } = render(
+      <BirdseyeMapCanvas people={peopleWithAvatar} />
+    );
+
+    // Node 1 has avatar: should have clipPath and image element
+    const clipPath1 = container.querySelector('#avatar-clip-1');
+    expect(clipPath1).toBeInTheDocument();
+
+    const node1Image = container.querySelector('image[href="data:image/jpeg;base64,mapavatar1"]');
+    expect(node1Image).toBeInTheDocument();
+    expect(node1Image?.getAttribute('clip-path')).toBe('url(#avatar-clip-1)');
+
+    // Node 2 has no avatar: should render initials
+    expect(screen.getByText('AB')).toBeInTheDocument();
+
+    // Select node 1: toolbar should render image
+    const node1 = screen.getByTestId('map-node-1');
+    fireEvent.click(node1);
+
+    const toolbar = screen.getByTestId('map-selected-toolbar');
+    const toolbarImg = within(toolbar).getByRole('img', { name: 'Arthur Miller' });
+    expect(toolbarImg).toBeInTheDocument();
+    expect(toolbarImg).toHaveAttribute('src', 'data:image/jpeg;base64,mapavatar1');
+  });
 });
 
 

@@ -167,5 +167,57 @@ describe('EditPersonModal', () => {
       expect(onRemoveRelationship).toHaveBeenCalledWith('partner-1', 'partner');
     });
   });
+
+  it('renders avatar photo section and opens PhotoCropModal when clicked', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onDelete = vi.fn();
+
+    render(
+      <EditPersonModal
+        isOpen={true}
+        onClose={onClose}
+        person={mockPerson}
+        onSave={onSave}
+        onDelete={onDelete}
+      />
+    );
+
+    // Verify avatar photo section and Upload Photo button
+    const uploadPhotoBtn = screen.getByRole('button', { name: /Upload Photo/i });
+    expect(uploadPhotoBtn).toBeInTheDocument();
+
+    fireEvent.click(uploadPhotoBtn);
+    expect(screen.getByRole('dialog', { name: /Photo for Margaret Miller/i })).toBeInTheDocument();
+  });
+
+  it('submits updated data without last name when cleared', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onDelete = vi.fn();
+
+    render(
+      <EditPersonModal
+        isOpen={true}
+        onClose={onClose}
+        person={mockPerson}
+        onSave={onSave}
+        onDelete={onDelete}
+      />
+    );
+
+    fireEvent.change(screen.getByDisplayValue('Miller'), {
+      target: { value: '' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith('p1', expect.objectContaining({
+        first_name: 'Margaret',
+        last_name: null,
+      }));
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });
 

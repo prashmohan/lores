@@ -1153,7 +1153,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             {/* Person Nodes */}
             {nodes.map((node) => {
               const isFocus = node.person.id === (selectedPersonId || focusPersonId);
-              const fullName = `${node.person.first_name} ${node.person.last_name}`.trim();
+              const fullName = [node.person.first_name, node.person.last_name].filter(Boolean).join(' ');
 
               let datesLabel = '';
               if (node.person.birth_date && node.person.death_date) {
@@ -1234,24 +1234,51 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                     />
                   )}
 
-                  {/* Avatar Circle */}
-                  <circle
-                    cx="32"
-                    cy="45"
-                    r="18"
-                    className={isFocus ? 'fill-amber-200' : 'fill-slate-100 group-hover:fill-amber-100'}
-                  />
-                  <text
-                    x="32"
-                    y="51"
-                    textAnchor="middle"
-                    className={`text-xs font-black select-none ${
-                      isFocus ? 'fill-amber-900' : 'fill-slate-600'
-                    }`}
-                  >
-                    {(node.person.first_name?.[0] || '').toUpperCase()}
-                    {(node.person.last_name?.[0] || '').toUpperCase()}
-                  </text>
+                  {/* Avatar Element: Photo if available, or Initials */}
+                  {node.person.avatar_url ? (
+                    <g>
+                      <defs>
+                        <clipPath id={`avatar-clip-${node.person.id}`}>
+                          <circle cx="32" cy="45" r="18" />
+                        </clipPath>
+                      </defs>
+                      <circle
+                        cx="32"
+                        cy="45"
+                        r="18"
+                        className={isFocus ? 'fill-amber-200 stroke-amber-500 stroke-2' : 'fill-slate-100 stroke-slate-300 stroke-1'}
+                      />
+                      <image
+                        href={node.person.avatar_url}
+                        x="14"
+                        y="27"
+                        width="36"
+                        height="36"
+                        clipPath={`url(#avatar-clip-${node.person.id})`}
+                        preserveAspectRatio="xMidYMid slice"
+                      />
+                    </g>
+                  ) : (
+                    <g>
+                      <circle
+                        cx="32"
+                        cy="45"
+                        r="18"
+                        className={isFocus ? 'fill-amber-200' : 'fill-slate-100 group-hover:fill-amber-100'}
+                      />
+                      <text
+                        x="32"
+                        y="51"
+                        textAnchor="middle"
+                        className={`text-xs font-black select-none ${
+                          isFocus ? 'fill-amber-900' : 'fill-slate-600'
+                        }`}
+                      >
+                        {(node.person.first_name?.[0] || '').toUpperCase()}
+                        {(node.person.last_name?.[0] || '').toUpperCase()}
+                      </text>
+                    </g>
+                  )}
 
                   {/* Name Text - Clicking directly on name navigates to Focus View */}
                   <text
@@ -1299,13 +1326,21 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
               className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-slate-900/95 backdrop-blur-md text-white border-2 border-amber-400 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
             >
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
-                  {(selected.first_name?.[0] || '').toUpperCase()}
-                  {(selected.last_name?.[0] || '').toUpperCase()}
-                </div>
+                {selected.avatar_url ? (
+                  <img
+                    src={selected.avatar_url}
+                    alt={[selected.first_name, selected.last_name].filter(Boolean).join(' ')}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-amber-400"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                    {(selected.first_name?.[0] || '').toUpperCase()}
+                    {(selected.last_name?.[0] || '').toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-extrabold leading-tight">
-                    {selected.first_name} {selected.last_name}
+                    {[selected.first_name, selected.last_name].filter(Boolean).join(' ')}
                   </p>
                   <p className="text-[11px] text-slate-300 font-medium">
                     {selected.birth_date ? `b. ${selected.birth_date}` : 'Family Member'}

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class PersonBase(BaseModel):
     first_name: str
-    last_name: str
+    last_name: str | None = None
     maiden_name: str | None = None
     gender: str = "unknown"
     is_living: bool = True

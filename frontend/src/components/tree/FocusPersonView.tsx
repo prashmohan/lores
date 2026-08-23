@@ -12,6 +12,7 @@ interface FocusPersonViewProps {
   onSelectPerson: (id: string) => void;
   onAddRelative?: (type: RelativeType) => void;
   onEditPerson?: (person: PersonSummary) => void;
+  onEditPhoto?: (person: PersonSummary) => void;
   workspaceId?: string;
 }
 
@@ -22,11 +23,13 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
   onSelectPerson,
   onAddRelative,
   onEditPerson,
+  onEditPhoto,
 }) => {
   const data = propData || neighborhood;
   if (!data) return null;
 
   const activeEditPerson = !isViewer ? onEditPerson : undefined;
+  const activeEditPhoto = !isViewer ? onEditPhoto : undefined;
 
   return (
     <div className="flex flex-col items-center gap-10 py-6 max-w-5xl mx-auto px-4 select-none">
@@ -54,6 +57,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               person={parent}
               onClick={() => onSelectPerson(parent.id)}
               onEdit={activeEditPerson}
+              onEditPhoto={activeEditPhoto}
             />
           ))}
           {!isViewer && onAddRelative && (
@@ -85,6 +89,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 person={sibling}
                 onClick={() => onSelectPerson(sibling.id)}
                 onEdit={activeEditPerson}
+                onEditPhoto={activeEditPhoto}
               />
             ))}
             {!isViewer && onAddRelative && (
@@ -107,7 +112,12 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
             <Sparkles className="w-3.5 h-3.5 text-amber-700" />
             <span>Focus Person</span>
           </span>
-          <PersonCard person={data.focus_person} isFocus={true} onEdit={activeEditPerson} />
+          <PersonCard
+            person={data.focus_person}
+            isFocus={true}
+            onEdit={activeEditPerson}
+            onEditPhoto={activeEditPhoto}
+          />
         </div>
 
         {/* Spouse / Partner (Right Column) */}
@@ -123,6 +133,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 person={partner}
                 onClick={() => onSelectPerson(partner.id)}
                 onEdit={activeEditPerson}
+                onEditPhoto={activeEditPhoto}
               />
             ))}
             {!isViewer && onAddRelative && (
@@ -153,6 +164,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               person={child}
               onClick={() => onSelectPerson(child.id)}
               onEdit={activeEditPerson}
+              onEditPhoto={activeEditPhoto}
             />
           ))}
           {!isViewer && onAddRelative && (

@@ -19,7 +19,7 @@ class Person(Base, TimestampMixin):
         Uuid, ForeignKey("workspaces.id"), index=True, nullable=False
     )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     maiden_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     gender: Mapped[str] = mapped_column(String(20), default="unknown", nullable=False)
     is_living: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -33,7 +33,7 @@ class Person(Base, TimestampMixin):
     death_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     biography: Mapped[str | None] = mapped_column(Text, nullable=True)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

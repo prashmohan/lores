@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Trash2, AlertTriangle, Unlink, Heart, Users, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Unlink, Heart, Users, ArrowUp, ArrowDown, Camera } from 'lucide-react';
 import type { PersonRead, PersonSummary, PersonUpdate } from '../../types/api';
 import { extractKnownPlaces, generateYearSuggestions } from '../../lib/autocomplete';
+import { PhotoCropModal } from './PhotoCropModal';
 
 export interface RelativeGroup {
   parents: PersonSummary[];
@@ -42,6 +43,8 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   const [deathDate, setDeathDate] = useState('');
   const [deathPlace, setDeathPlace] = useState('');
   const [biography, setBiography] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
 
   const knownPlaces = useMemo(() => extractKnownPlaces(allPeople), [allPeople]);
   const yearSuggestions = useMemo(() => generateYearSuggestions(), []);
@@ -66,6 +69,8 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
       setDeathDate(person.death_date || '');
       setDeathPlace(person.death_place || '');
       setBiography('');
+      setAvatarUrl(person.avatar_url || null);
+      setIsPhotoModalOpen(false);
       setError(null);
       setLoading(false);
       setIsConfirmingDelete(false);
@@ -80,10 +85,6 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
       setError('First name is required.');
       return;
     }
-    if (!lastName.trim()) {
-      setError('Last name is required.');
-      return;
-    }
 
     setError(null);
     setLoading(true);
@@ -91,7 +92,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
     try {
       const updates: PersonUpdate = {
         first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        last_name: lastName.trim() || null,
         maiden_name: maidenName.trim() || null,
         gender,
         is_living: isLiving,
@@ -100,6 +101,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
         death_date: !isLiving && deathDate.trim() ? deathDate.trim() : null,
         death_place: !isLiving && deathPlace.trim() ? deathPlace.trim() : null,
         biography: biography.trim() || null,
+        avatar_url: avatarUrl,
       };
 
       await onSave(person.id, updates);
@@ -151,8 +153,9 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
+    <>
+      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
           className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white rounded-2xl p-6 shadow-2xl z-50 max-h-[90vh] overflow-y-auto border-2 border-slate-200"
@@ -160,7 +163,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
         >
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">
             <Dialog.Title className="text-xl font-extrabold text-slate-900 leading-snug">
-              Edit Details for {person.first_name} {person.last_name}
+              Edit Details for {[person.first_name, person.last_name].filter(Boolean).join(' ')}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -217,6 +220,55 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              {/* Avatar Photo Management Section */}
+              <div className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="relative shrink-0">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={[firstName, lastName].filter(Boolean).join(' ') || 'Person'}
+                      className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-400 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-amber-900 font-black text-base shadow-xs">
+                      {`${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '?'}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900">Portrait Photo</h3>
+                  <p className="text-xs text-slate-500 truncate">
+                    {avatarUrl ? 'Photo uploaded & centered' : 'No photo uploaded yet'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl(null)}
+                      disabled={loading}
+                      className="px-3 py-1.5 rounded-xl text-rose-700 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 border border-rose-200 bg-white"
+                      aria-label="Remove Photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Remove</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsPhotoModalOpen(true)}
+                    disabled={loading}
+                    className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                    aria-label={avatarUrl ? 'Change Photo' : 'Upload Photo'}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="edit_first_name" className="block text-sm font-bold text-slate-800 mb-1">
@@ -235,12 +287,11 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
 
                 <div>
                   <label htmlFor="edit_last_name" className="block text-sm font-bold text-slate-800 mb-1">
-                    Last Name <span className="text-red-600">*</span>
+                    Last Name <span className="text-xs font-normal text-slate-500">(Optional)</span>
                   </label>
                   <input
                     id="edit_last_name"
                     type="text"
-                    required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     placeholder="e.g. Miller"
@@ -579,5 +630,16 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
+
+    <PhotoCropModal
+      isOpen={isPhotoModalOpen}
+      onClose={() => setIsPhotoModalOpen(false)}
+      personName={`${firstName} ${lastName}`.trim() || 'Person'}
+      currentAvatarUrl={avatarUrl}
+      onSavePhoto={async (newUrl) => {
+        setAvatarUrl(newUrl);
+      }}
+    />
+  </>
+);
 };

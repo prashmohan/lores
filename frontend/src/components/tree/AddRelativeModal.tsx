@@ -101,14 +101,14 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
     sibling: 'Sibling',
   };
 
-  const titleText = `Add ${typeLabels[relativeType]} for ${focusPerson.first_name} ${focusPerson.last_name}`;
+  const titleText = `Add ${typeLabels[relativeType]} for ${[focusPerson.first_name, focusPerson.last_name].filter(Boolean).join(' ')}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (mode === 'link_existing') {
       if (!selectedExistingId) {
-        setError('Please select an existing person from the list.');
+        setError('Please select a person to link.');
         return;
       }
       setError(null);
@@ -118,14 +118,14 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
           relativeType,
           undefined,
           selectedExistingId,
-          relativeType === 'child' && selectedOtherParentId ? selectedOtherParentId : undefined
+          relativeType === 'child' ? selectedOtherParentId || undefined : undefined
         );
         onClose();
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Failed to link relative. Please try again.');
+          setError('Failed to link family relationship.');
         }
       } finally {
         setLoading(false);
@@ -133,13 +133,8 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
       return;
     }
 
-    // Creating new person
     if (!firstName.trim()) {
       setError('First name is required.');
-      return;
-    }
-    if (!lastName.trim()) {
-      setError('Last name is required.');
       return;
     }
 
@@ -149,7 +144,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
     try {
       const payload: PersonCreate = {
         first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        last_name: lastName.trim() || undefined,
         maiden_name: maidenName.trim() || undefined,
         gender,
         is_living: isLiving,
@@ -336,12 +331,11 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
 
                   <div>
                     <label htmlFor="last_name" className="block text-sm font-bold text-slate-800 mb-1">
-                      Last Name <span className="text-red-600">*</span>
+                      Last Name <span className="text-xs font-normal text-slate-500">(Optional)</span>
                     </label>
                     <input
                       id="last_name"
                       type="text"
-                      required
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="e.g. Miller"

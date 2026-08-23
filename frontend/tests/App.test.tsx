@@ -83,7 +83,6 @@ describe('App navigation and modals', () => {
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /Focus View/i })).toBeInTheDocument();
       expect(screen.getByRole('tab', { name: /Bird's-Eye Map/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Guided Interview/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Family Activity/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Family Trash/i })).toBeInTheDocument();
     });
@@ -103,18 +102,17 @@ describe('App navigation and modals', () => {
     });
   });
 
-  it('opens GuidedInterviewModal when Guided Interview button is clicked', async () => {
+  it('opens CreateWorkspaceModal when New Family button is clicked in header', async () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Guided Interview/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Create New Family Tree/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Guided Interview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Create New Family Tree/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /Family Lore Assistant/i })).toBeInTheDocument();
-      expect(screen.getByText(/Who would you like to add\?/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Create New Family Tree/i })).toBeInTheDocument();
     });
   });
 

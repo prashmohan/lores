@@ -13,12 +13,59 @@
   @apply outline-none ring-4 ring-amber-500 ring-offset-2;
 }
 
-/* High contrast mode overrides */
+/* High contrast mode overrides (WCAG AAA) */
+html.high-contrast,
 .high-contrast {
-  --tw-bg-opacity: 1;
+  color-scheme: light;
 }
 
+html.high-contrast body,
 .high-contrast body {
-  background-color: #ffffff;
-  color: #000000;
+  background-color: #f8fafc !important;
+  color: #000000 !important;
+}
+
+html.high-contrast .bg-white,
+.high-contrast .bg-white,
+html.high-contrast .bg-slate-50,
+.high-contrast .bg-slate-50 {
+  background-color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+html.high-contrast .text-slate-900,
+html.high-contrast .text-slate-800,
+html.high-contrast .text-slate-700,
+html.high-contrast .text-slate-600,
+html.high-contrast .text-slate-500,
+.high-contrast .text-slate-900,
+.high-contrast .text-slate-800,
+.high-contrast .text-slate-700,
+.high-contrast .text-slate-600,
+.high-contrast .text-slate-500 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+html.high-contrast .border-slate-200,
+html.high-contrast .border-slate-300,
+html.high-contrast .border-slate-100,
+.high-contrast .border-slate-200,
+.high-contrast .border-slate-300,
+.high-contrast .border-slate-100 {
+  border-color: #000000 !important;
+  border-width: 2px !important;
+}
+
+html.high-contrast .bg-amber-500,
+.high-contrast .bg-amber-500 {
+  background-color: #eab308 !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+
+html.high-contrast :focus-visible,
+.high-contrast :focus-visible {
+  outline: 3px solid #000000 !important;
+  outline-offset: 2px !important;
 }

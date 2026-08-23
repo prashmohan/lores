@@ -76,10 +76,10 @@ describe('ActivityFeedModal', () => {
 
     await waitFor(() => {
       expect(getAuditLogsSpy).toHaveBeenCalledWith('ws-1', { limit: 50 });
-      expect(screen.getByText(/Created/i)).toBeInTheDocument();
-      expect(screen.getByText(/Updated/i)).toBeInTheDocument();
-      expect(screen.getByText(/Deleted/i)).toBeInTheDocument();
-      expect(screen.getByText(/Restored/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Created/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Updated/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Deleted/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/Restored/i).length).toBeGreaterThan(0);
     });
   });
 

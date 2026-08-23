@@ -226,3 +226,28 @@ export interface AuditLogRead {
   changes: Record<string, unknown>;
   created_at: string;
 }
+
+export interface AdminUserSummary {
+  id: string;
+  email: string;
+  display_name: string;
+}
+
+export interface AdminWorkspaceItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  created_at: string;
+  member_count: number;
+  people_count: number;
+  admins: AdminUserSummary[];
+}
+
+export interface AdminSystemStats {
+  total_workspaces: number;
+  total_users: number;
+  total_people: number;
+  total_lore_notes: number;
+}
+

@@ -1,5 +1,7 @@
 import type {
   AddRelativeRequest,
+  AdminSystemStats,
+  AdminWorkspaceItem,
   AuditLogRead,
   FocusNeighborhoodResponse,
   LoreNoteCreate,
@@ -281,5 +283,14 @@ export const api = {
       const query = params.toString() ? `?${params.toString()}` : '';
       return request<AuditLogRead[]>(`/workspaces/${workspaceId}/audit-logs${query}`);
     },
+  },
+
+  // Super Admin
+  admin: {
+    getWorkspaces: (): Promise<AdminWorkspaceItem[]> =>
+      request<AdminWorkspaceItem[]>('/admin/workspaces'),
+
+    getStats: (): Promise<AdminSystemStats> =>
+      request<AdminSystemStats>('/admin/stats'),
   },
 };

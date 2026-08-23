@@ -6,12 +6,12 @@ import { FocusPersonView } from '../src/components/tree/FocusPersonView';
 import { PersonCard } from '../src/components/tree/PersonCard';
 import { BirdseyeMapCanvas, type MapPerson } from '../src/components/map/BirdseyeMapCanvas';
 import { AddRelativeModal } from '../src/components/tree/AddRelativeModal';
-import { GuidedInterviewModal } from '../src/components/interview/GuidedInterviewModal';
+import { CreateWorkspaceModal } from '../src/components/workspace/CreateWorkspaceModal';
+import { SuperAdminDashboard } from '../src/components/admin/SuperAdminDashboard';
 import { ActivityFeedModal } from '../src/components/history/ActivityFeedModal';
 import { TrashCanModal } from '../src/components/history/TrashCanModal';
 import { LoginForm } from '../src/components/auth/LoginForm';
 import { VerifyOtpModal } from '../src/components/auth/VerifyOtpModal';
-import { BreadcrumbBar } from '../src/components/layout/BreadcrumbBar';
 import { Header } from '../src/components/layout/Header';
 
 import type { FocusNeighborhoodResponse, PersonSummary, UserRead, WorkspaceRead, UserWorkspaceMembership } from '../src/types/api';
@@ -160,13 +160,24 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('GuidedInterviewModal open dialog passes axe accessibility audit', async () => {
+  it('CreateWorkspaceModal open dialog passes axe accessibility audit', async () => {
     const { container } = render(
-      <GuidedInterviewModal
+      <CreateWorkspaceModal
         isOpen={true}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
-        basePersonName="Margaret Miller"
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('SuperAdminDashboard open dialog passes axe accessibility audit', async () => {
+    const { container } = render(
+      <SuperAdminDashboard
+        isOpen={true}
+        onClose={vi.fn()}
+        onSelectWorkspace={vi.fn()}
       />
     );
     const results = await axe(container);
@@ -218,26 +229,17 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
     expect(results).toHaveNoViolations();
   });
 
-  it('BreadcrumbBar and Header pass axe accessibility audit', async () => {
+  it('Header passes axe accessibility audit', async () => {
     const { container } = render(
-      <div>
-        <Header
-          currentUser={mockUser}
-          workspaces={[mockMembership]}
-          currentWorkspace={mockWorkspace}
-          onSelectWorkspace={vi.fn()}
-          onLogout={vi.fn()}
-          highContrast={false}
-          onToggleHighContrast={vi.fn()}
-        />
-        <BreadcrumbBar
-          history={[
-            { id: '1', name: 'Arthur Miller' },
-            { id: '10', name: 'Margaret Miller' },
-          ]}
-          onSelectPerson={vi.fn()}
-        />
-      </div>
+      <Header
+        currentUser={mockUser}
+        workspaces={[mockMembership]}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
     );
     const results = await axe(container);
     expect(results).toHaveNoViolations();

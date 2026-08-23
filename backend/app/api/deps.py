@@ -74,3 +74,12 @@ def require_role(required_role: str) -> Callable[..., str]:
 
 
 require_workspace_role = require_role
+
+
+def require_superadmin(user: User = Depends(get_current_user)) -> User:
+    if not user.is_superadmin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superadmin privileges required",
+        )
+    return user

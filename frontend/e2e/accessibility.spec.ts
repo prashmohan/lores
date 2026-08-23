@@ -174,11 +174,11 @@ test.describe('Automated E2E Accessibility (WCAG 2.1 AA / AAA)', () => {
     expect(results.violations).toEqual([]);
   });
 
-  test('Guided Interview modal dialog passes accessibility audit', async ({ page }) => {
+  test('Create Workspace modal dialog passes accessibility audit', async ({ page }) => {
     await setupMockApi(page);
     await page.goto('/');
 
-    await page.getByRole('button', { name: /Guided Interview/i }).click();
+    await page.getByRole('button', { name: /Create New Family Tree/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
     const results = await new AxeBuilder({ page })

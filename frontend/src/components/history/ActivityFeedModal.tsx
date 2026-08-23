@@ -102,10 +102,72 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
   };
 
   const formatEntityType = (type: string) => {
-    if (type === 'person') return 'Person';
-    if (type === 'lore_note' || type === 'lore') return 'Lore Note';
-    if (type === 'union') return 'Relationship';
+    const t = type.toLowerCase();
+    if (t === 'person') return 'Person';
+    if (t === 'lore_note' || t === 'lore') return 'Lore Note';
+    if (t === 'union' || t === 'relationship' || t === 'childrelationship' || t === 'familyunion') return 'Relationship';
     return type.replace(/_/g, ' ');
+  };
+
+  const formatEventDescription = (log: AuditLogRead) => {
+    const changes = log.changes || {};
+    const actor = log.actor_name || log.actor_email || 'A family member';
+    const entity = log.entity_type.toLowerCase();
+    const action = log.action.toUpperCase();
+
+    // 1. Relationship events
+    if (entity.includes('relationship') || entity.includes('union')) {
+      if (changes.action === 'add_relative') {
+        const target = (changes.target_person as string) || 'relative';
+        const base = (changes.base_person as string) || 'family member';
+        const rel = (changes.relationship_type as string) || 'relative';
+        return `${actor} connected ${target} as ${rel} of ${base}`;
+      }
+      if (changes.action === 'disconnect_partner') {
+        const p1 = (changes.partner1 as string) || 'partner';
+        const p2 = (changes.partner2 as string) || 'partner';
+        return `${actor} disconnected partnership between ${p1} and ${p2}`;
+      }
+      if (changes.action === 'disconnect_parent_child') {
+        const parent = (changes.parent as string) || 'parent';
+        const child = (changes.child as string) || 'child';
+        return `${actor} disconnected ${parent} as parent of ${child}`;
+      }
+      return `${actor} updated a family relationship`;
+    }
+
+    // 2. Person events
+    if (entity.includes('person')) {
+      const personName = (changes.person as string) || 'family member';
+      if (action === 'CREATE') {
+        return `${actor} added ${personName} to the family tree`;
+      }
+      if (action === 'UPDATE') {
+        return `${actor} updated profile details for ${personName}`;
+      }
+      if (action === 'DELETE') {
+        return `${actor} moved ${personName} to Family Trash`;
+      }
+      if (action === 'RESTORE') {
+        return `${actor} restored ${personName} from Family Trash`;
+      }
+    }
+
+    // 3. Lore events
+    if (entity.includes('lore')) {
+      const title = (changes.title as string) ? `"${changes.title}"` : 'a story';
+      if (action === 'CREATE') {
+        return `${actor} recorded a new story ${title}`;
+      }
+      if (action === 'DELETE') {
+        return `${actor} moved story ${title} to Family Trash`;
+      }
+      if (action === 'RESTORE') {
+        return `${actor} restored story ${title} from Family Trash`;
+      }
+    }
+
+    return `${actor} performed ${log.action.toLowerCase()} on ${formatEntityType(log.entity_type)}`;
   };
 
   return (
@@ -220,21 +282,16 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
                   </div>
 
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span>
-                        <strong className="text-slate-900">{log.actor_name || log.actor_email}</strong> performed{' '}
-                        <code className="text-xs bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono">
-                          {log.action}
-                        </code>
-                      </span>
+                    <div className="flex items-center gap-2 text-sm text-slate-800 font-semibold">
+                      <User className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>{formatEventDescription(log)}</span>
                     </div>
 
                     {hasChanges && (
                       <button
                         type="button"
                         onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
-                        className="text-xs font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1 hover:underline cursor-pointer"
+                        className="text-xs font-bold text-amber-700 hover:text-amber-800 shrink-0 flex items-center gap-1 hover:underline cursor-pointer"
                       >
                         <span>{isExpanded ? 'Hide Changes' : 'View Changes'}</span>
                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}

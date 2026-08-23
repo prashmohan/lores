@@ -11,6 +11,13 @@ describe('Header', () => {
     is_superadmin: false,
   };
 
+  const mockSuperAdmin: UserRead = {
+    id: 'u2',
+    email: 'super@lores.org',
+    display_name: 'Super Admin',
+    is_superadmin: true,
+  };
+
   const mockWorkspace: WorkspaceRead = {
     id: 'w1',
     name: 'The Miller Family',
@@ -83,5 +90,50 @@ describe('Header', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Log Out/i }));
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers onCreateWorkspace when New Family button is clicked or selected', () => {
+    const onCreateWorkspace = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onCreateWorkspace={onCreateWorkspace}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Create New Family Tree/i }));
+    expect(onCreateWorkspace).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '__NEW__' } });
+    expect(onCreateWorkspace).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders Super Admin button and triggers onOpenSuperAdmin for superadmins', () => {
+    const onOpenSuperAdmin = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockSuperAdmin}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onOpenSuperAdmin={onOpenSuperAdmin}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const adminBtn = screen.getByRole('button', { name: /Open Super Admin Dashboard/i });
+    expect(adminBtn).toBeInTheDocument();
+    fireEvent.click(adminBtn);
+    expect(onOpenSuperAdmin).toHaveBeenCalledTimes(1);
   });
 });

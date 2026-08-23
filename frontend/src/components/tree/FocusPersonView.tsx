@@ -5,18 +5,24 @@ import type { FocusNeighborhoodResponse, PersonSummary } from '../../types/api';
 export type RelativeType = 'parent' | 'partner' | 'child' | 'sibling';
 
 interface FocusPersonViewProps {
-  data: FocusNeighborhoodResponse;
+  data?: FocusNeighborhoodResponse;
+  neighborhood?: FocusNeighborhoodResponse;
   onSelectPerson: (id: string) => void;
   onAddRelative: (type: RelativeType) => void;
   onEditPerson?: (person: PersonSummary) => void;
+  workspaceId?: string;
 }
 
 export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
-  data,
+  data: propData,
+  neighborhood,
   onSelectPerson,
   onAddRelative,
   onEditPerson,
 }) => {
+  const data = propData || neighborhood;
+  if (!data) return null;
+
   return (
     <div className="flex flex-col items-center gap-8 py-8 max-w-5xl mx-auto px-4 select-none">
       {/* Parents Section (Top) */}

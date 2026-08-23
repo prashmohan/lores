@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
+import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert } from 'lucide-react';
 import type { UserRead, UserWorkspaceMembership, WorkspaceRead } from '../../types/api';
 
 interface HeaderProps {
@@ -7,6 +7,8 @@ interface HeaderProps {
   workspaces: UserWorkspaceMembership[];
   currentWorkspace: WorkspaceRead | null;
   onSelectWorkspace: (workspace: WorkspaceRead) => void;
+  onCreateWorkspace?: () => void;
+  onOpenSuperAdmin?: () => void;
   onLogout: () => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   workspaces,
   currentWorkspace,
   onSelectWorkspace,
+  onCreateWorkspace,
+  onOpenSuperAdmin,
   onLogout,
   highContrast,
   onToggleHighContrast,
@@ -24,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-white border-b-2 border-slate-200 px-4 sm:px-8 py-3 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-6">
+        {/* Brand & Workspace Controls */}
+        <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 shadow-sm">
               <TreePine className="w-6 h-6 stroke-[2.5]" />
@@ -40,51 +44,89 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Workspace Switcher */}
+          {/* Workspace Switcher & Create Button */}
           {workspaces.length > 0 && currentWorkspace && (
-            <div className="relative inline-flex items-center">
-              <label htmlFor="workspace-select" className="sr-only">
-                Select Workspace
-              </label>
-              <select
-                id="workspace-select"
-                value={currentWorkspace.id}
-                onChange={(e) => {
-                  const selected = workspaces.find((w) => w.workspace.id === e.target.value);
-                  if (selected) {
-                    onSelectWorkspace(selected.workspace);
-                  }
-                }}
-                className="appearance-none bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 font-bold text-sm rounded-lg pl-3 pr-8 py-2 cursor-pointer focus:border-amber-500 transition-colors"
-              >
-                {workspaces.map((item) => (
-                  <option key={item.workspace.id} value={item.workspace.id}>
-                    {item.workspace.name} ({item.role})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-slate-600 absolute right-2.5 pointer-events-none" />
+            <div className="flex items-center gap-2">
+              <div className="relative inline-flex items-center">
+                <label htmlFor="workspace-select" className="sr-only">
+                  Select Workspace
+                </label>
+                <select
+                  id="workspace-select"
+                  value={currentWorkspace.id}
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') {
+                      if (onCreateWorkspace) onCreateWorkspace();
+                      return;
+                    }
+                    const selected = workspaces.find((w) => w.workspace.id === e.target.value);
+                    if (selected) {
+                      onSelectWorkspace(selected.workspace);
+                    }
+                  }}
+                  className="appearance-none bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 font-bold text-sm rounded-xl pl-3 pr-8 py-2 cursor-pointer focus:border-amber-500 transition-colors max-w-[200px] sm:max-w-[240px] truncate"
+                >
+                  {workspaces.map((item) => (
+                    <option key={item.workspace.id} value={item.workspace.id}>
+                      {item.workspace.name} ({item.role})
+                    </option>
+                  ))}
+                  <option value="__NEW__">+ Create New Family...</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-600 absolute right-2.5 pointer-events-none" />
+              </div>
+
+              {onCreateWorkspace && (
+                <button
+                  type="button"
+                  onClick={onCreateWorkspace}
+                  title="Create New Family Tree"
+                  aria-label="Create New Family Tree"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-amber-100 hover:text-amber-900 border-2 border-slate-300 hover:border-amber-400 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden lg:inline">New Family</span>
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Controls: High Contrast + User Profile */}
-        <div className="flex items-center gap-3">
+        {/* Controls: Super Admin + High Contrast + User Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Super Admin Dashboard Trigger */}
+          {currentUser?.is_superadmin && onOpenSuperAdmin && (
+            <button
+              type="button"
+              onClick={onOpenSuperAdmin}
+              className="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              title="Open Super Admin Dashboard"
+              aria-label="Open Super Admin Dashboard"
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-800" />
+              <span className="hidden sm:inline">Super Admin</span>
+            </button>
+          )}
+
           {/* High Contrast Toggle */}
           <button
             type="button"
             onClick={onToggleHighContrast}
-            className="p-2.5 rounded-lg border-2 border-slate-300 hover:border-slate-400 bg-slate-50 text-slate-700 hover:text-slate-950 font-bold text-xs flex items-center gap-2 cursor-pointer transition-colors"
-            title="Toggle High Contrast Mode"
+            className={`px-3 py-2 rounded-xl border-2 font-extrabold text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
+              highContrast
+                ? 'bg-amber-500 text-slate-950 border-slate-900 shadow-sm'
+                : 'bg-slate-50 border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-950'
+            }`}
+            title="Toggle High Contrast Mode (WCAG AAA)"
             aria-label="Toggle High Contrast Mode"
           >
-            {highContrast ? <Sun className="w-4 h-4 text-amber-600" /> : <Moon className="w-4 h-4" />}
-            <span className="hidden md:inline">{highContrast ? 'Standard Contrast' : 'High Contrast'}</span>
+            {highContrast ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <span className="hidden md:inline">{highContrast ? 'High Contrast: ON' : 'High Contrast'}</span>
           </button>
 
           {/* User Info & Logout */}
           {currentUser && (
-            <div className="flex items-center gap-3 pl-3 border-l-2 border-slate-200">
+            <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l-2 border-slate-200">
               <div className="flex items-center gap-2 text-left">
                 <div className="w-9 h-9 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-sm">
                   {currentUser.display_name ? currentUser.display_name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
@@ -93,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="text-xs font-bold text-slate-900 leading-tight">
                     {currentUser.display_name || currentUser.email}
                   </p>
-                  <p className="text-2xs text-slate-500 truncate max-w-[140px]">
+                  <p className="text-2xs text-slate-500 truncate max-w-[120px]">
                     {currentUser.email}
                   </p>
                 </div>
@@ -102,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={onLogout}
-                className="p-2 rounded-lg text-slate-600 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-600 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
                 title="Log Out"
                 aria-label="Log Out"
               >

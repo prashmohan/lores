@@ -9,29 +9,26 @@ import type {
   PersonRead,
   PersonSummary,
   PersonUpdate,
-  TreeOverviewResponse,
 } from './types/api';
 import { Header } from './components/layout/Header';
-import { BreadcrumbBar, type BreadcrumbItem } from './components/layout/BreadcrumbBar';
 import { FocusPersonView, type RelativeType } from './components/tree/FocusPersonView';
 import { AddRelativeModal } from './components/tree/AddRelativeModal';
 import { EditPersonModal, type RelativeGroup } from './components/tree/EditPersonModal';
-import { GuidedInterviewModal, type GuidedInterviewData } from './components/interview/GuidedInterviewModal';
 import { BirdseyeMapCanvas } from './components/map/BirdseyeMapCanvas';
 import { ActivityFeedModal } from './components/history/ActivityFeedModal';
 import { TrashCanModal } from './components/history/TrashCanModal';
+import { CreateWorkspaceModal } from './components/workspace/CreateWorkspaceModal';
+import { SuperAdminDashboard } from './components/admin/SuperAdminDashboard';
 import { LoginForm } from './components/auth/LoginForm';
 import { VerifyOtpModal } from './components/auth/VerifyOtpModal';
-import { UserPlus, Plus, Loader2, Compass, Network, Sparkles, History, Trash2 } from 'lucide-react';
+import { UserPlus, Plus, Loader2, Compass, Network, History, Trash2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
   const [workspaces, setWorkspaces] = useState<UserWorkspaceMembership[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceRead | null>(null);
   const [focusNeighborhood, setFocusNeighborhood] = useState<FocusNeighborhoodResponse | null>(null);
-  const [focusHistory, setFocusHistory] = useState<BreadcrumbItem[]>([]);
   const [allPeople, setAllPeople] = useState<PersonRead[]>([]);
-  const [treeOverview, setTreeOverview] = useState<TreeOverviewResponse | null>(null);
   const [editingPersonRelatives, setEditingPersonRelatives] = useState<RelativeGroup | null>(null);
   const [highContrast, setHighContrast] = useState(() => {
     try {
@@ -54,9 +51,10 @@ export const App: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<PersonSummary | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
+  const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
+  const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
 
   // Loading & Error states
   const [loading, setLoading] = useState(true);
@@ -84,22 +82,12 @@ export const App: React.FC = () => {
 
   // Fetch focus neighborhood for a person
   const loadFocusNeighborhood = useCallback(
-    async (workspaceId: string, personId: string, addToHistory = true) => {
+    async (workspaceId: string, personId: string) => {
       setTreeLoading(true);
       setError(null);
       try {
         const data = await api.tree.getFocusNeighborhood(workspaceId, personId);
         setFocusNeighborhood(data);
-
-        if (addToHistory) {
-          const fullName = `${data.focus_person.first_name} ${data.focus_person.last_name}`;
-          setFocusHistory((prev) => {
-            if (prev.length > 0 && prev[prev.length - 1].id === personId) {
-              return prev;
-            }
-            return [...prev, { id: personId, name: fullName }];
-          });
-        }
       } catch (err: unknown) {
         if (err instanceof ApiError) {
           setError(err.message);
@@ -120,20 +108,13 @@ export const App: React.FC = () => {
     async (workspace: WorkspaceRead) => {
       setCurrentWorkspace(workspace);
       setFocusNeighborhood(null);
-      setFocusHistory([]);
       setError(null);
 
       try {
-        const [people, overview] = await Promise.all([
-          api.people.list(workspace.id, { limit: 100 }),
-          api.tree.getOverview(workspace.id).catch(() => null),
-        ]);
+        const people = await api.people.list(workspace.id, { limit: 100 });
         setAllPeople(people);
-        if (overview) {
-          setTreeOverview(overview);
-        }
         if (people.length > 0) {
-          await loadFocusNeighborhood(workspace.id, people[0].id, true);
+          await loadFocusNeighborhood(workspace.id, people[0].id);
         }
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -148,14 +129,8 @@ export const App: React.FC = () => {
   const refreshPeopleList = useCallback(async () => {
     if (!currentWorkspace) return;
     try {
-      const [people, overview] = await Promise.all([
-        api.people.list(currentWorkspace.id, { limit: 100 }),
-        api.tree.getOverview(currentWorkspace.id).catch(() => null),
-      ]);
+      const people = await api.people.list(currentWorkspace.id, { limit: 100 });
       setAllPeople(people);
-      if (overview) {
-        setTreeOverview(overview);
-      }
     } catch {
       // Ignore background refresh errors
     }
@@ -197,9 +172,7 @@ export const App: React.FC = () => {
       setWorkspaces([]);
       setCurrentWorkspace(null);
       setFocusNeighborhood(null);
-      setFocusHistory([]);
       setAllPeople([]);
-      setTreeOverview(null);
     } finally {
       setLoading(false);
     }
@@ -226,7 +199,6 @@ export const App: React.FC = () => {
     setWorkspaces([]);
     setCurrentWorkspace(null);
     setFocusNeighborhood(null);
-    setFocusHistory([]);
     setAllPeople([]);
   };
 
@@ -247,26 +219,7 @@ export const App: React.FC = () => {
   // Switch focus person
   const handleSelectPerson = (personId: string) => {
     if (!currentWorkspace) return;
-    loadFocusNeighborhood(currentWorkspace.id, personId, true);
-  };
-
-  // Jump to breadcrumb
-  const handleBreadcrumbClick = (personId: string) => {
-    if (!currentWorkspace) return;
-    const targetIdx = focusHistory.findIndex((b) => b.id === personId);
-    if (targetIdx !== -1) {
-      setFocusHistory((prev) => prev.slice(0, targetIdx + 1));
-      loadFocusNeighborhood(currentWorkspace.id, personId, false);
-    }
-  };
-
-  // Reset focus to root
-  const handleResetFocus = () => {
-    if (focusHistory.length > 0 && currentWorkspace) {
-      const rootPerson = focusHistory[0];
-      setFocusHistory([rootPerson]);
-      loadFocusNeighborhood(currentWorkspace.id, rootPerson.id, false);
-    }
+    loadFocusNeighborhood(currentWorkspace.id, personId);
   };
 
   // Open add relative modal
@@ -309,7 +262,7 @@ export const App: React.FC = () => {
     await api.people.update(currentWorkspace.id, personId, updates);
     await refreshPeopleList();
     if (focusNeighborhood) {
-      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id);
     }
   };
 
@@ -327,7 +280,7 @@ export const App: React.FC = () => {
 
     await refreshPeopleList();
     if (focusNeighborhood) {
-      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id);
     }
     try {
       const neigh = await api.tree.getFocusNeighborhood(currentWorkspace.id, editingPerson.id);
@@ -349,10 +302,9 @@ export const App: React.FC = () => {
     await refreshPeopleList();
     const remainingPeople = allPeople.filter((p) => p.id !== personId);
     if (remainingPeople.length > 0) {
-      await loadFocusNeighborhood(currentWorkspace.id, remainingPeople[0].id, false);
+      await loadFocusNeighborhood(currentWorkspace.id, remainingPeople[0].id);
     } else {
       setFocusNeighborhood(null);
-      setFocusHistory([]);
     }
   };
 
@@ -373,29 +325,7 @@ export const App: React.FC = () => {
     });
 
     await refreshPeopleList();
-    await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
-  };
-
-  // Submit new relative via guided conversational interview
-  const handleGuidedInterviewSubmit = async (data: GuidedInterviewData) => {
-    if (!currentWorkspace || !focusNeighborhood) return;
-    await api.tree.addRelative(currentWorkspace.id, {
-      relative_type: data.relative_type,
-      base_person_id: focusNeighborhood.focus_person.id,
-      person_data: {
-        first_name: data.first_name,
-        last_name: data.last_name,
-        maiden_name: data.maiden_name,
-        birth_date: data.birth_date,
-        birth_place: data.birth_place,
-        is_living: data.is_living,
-        death_date: data.death_date,
-        death_place: data.death_place,
-      },
-    });
-
-    await refreshPeopleList();
-    await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+    await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id);
   };
 
   // Handle restore event from trash modal
@@ -403,7 +333,26 @@ export const App: React.FC = () => {
     if (!currentWorkspace) return;
     await refreshPeopleList();
     if (focusNeighborhood) {
-      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id);
+    }
+  };
+
+  // Create new workspace handler
+  const handleCreateWorkspace = async (name: string, description?: string) => {
+    const newWs = await api.workspaces.create({ name, description });
+    const userWorkspaces = await api.workspaces.list();
+    setWorkspaces(userWorkspaces);
+    await initWorkspaceTree(newWs);
+  };
+
+  // Open workspace from super admin dashboard
+  const handleSelectWorkspaceFromAdmin = async (workspaceId: string) => {
+    const existing = workspaces.find((w) => w.workspace.id === workspaceId);
+    if (existing) {
+      await initWorkspaceTree(existing.workspace);
+    } else {
+      const ws = await api.workspaces.get(workspaceId);
+      await initWorkspaceTree(ws);
     }
   };
 
@@ -427,7 +376,7 @@ export const App: React.FC = () => {
         is_living: true,
       });
       await refreshPeopleList();
-      await loadFocusNeighborhood(currentWorkspace.id, newPerson.id, true);
+      await loadFocusNeighborhood(currentWorkspace.id, newPerson.id);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
     } finally {
@@ -450,24 +399,26 @@ export const App: React.FC = () => {
   // Render Login View if not logged in
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50">
+      <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Lores</h1>
+          <p className="text-sm font-semibold text-slate-600 mt-1">
+            Accessible, senior-friendly family tree and oral history builder.
+          </p>
+        </div>
+
         <LoginForm onOtpRequested={handleOtpRequested} />
-        {isVerifyOpen && authEmail && (
-          <VerifyOtpModal
-            isOpen={isVerifyOpen}
-            email={authEmail}
-            devOtp={devOtp}
-            onSuccess={handleAuthSuccess}
-            onBack={() => setIsVerifyOpen(false)}
-          />
-        )}
+
+        <VerifyOtpModal
+          isOpen={isVerifyOpen}
+          onBack={() => setIsVerifyOpen(false)}
+          email={authEmail || ''}
+          devOtp={devOtp}
+          onSuccess={handleAuthSuccess}
+        />
       </div>
     );
   }
-
-  const focusPersonName = focusNeighborhood
-    ? `${focusNeighborhood.focus_person.first_name} ${focusNeighborhood.focus_person.last_name}`
-    : 'Selected Person';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
@@ -476,15 +427,11 @@ export const App: React.FC = () => {
         workspaces={workspaces}
         currentWorkspace={currentWorkspace}
         onSelectWorkspace={initWorkspaceTree}
+        onCreateWorkspace={() => setIsCreateWorkspaceOpen(true)}
+        onOpenSuperAdmin={() => setIsSuperAdminOpen(true)}
         onLogout={handleLogout}
         highContrast={highContrast}
         onToggleHighContrast={handleToggleHighContrast}
-      />
-
-      <BreadcrumbBar
-        history={focusHistory}
-        onSelectPerson={handleBreadcrumbClick}
-        onReset={handleResetFocus}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
@@ -528,16 +475,6 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setIsInterviewModalOpen(true)}
-                disabled={!focusNeighborhood}
-                className="px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-amber-50 hover:text-amber-900 border border-slate-200 hover:border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="w-4 h-4 text-amber-600 stroke-[2.5]" />
-                <span>Guided Interview</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setIsActivityModalOpen(true)}
                 className="px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-slate-100 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
               >
@@ -572,44 +509,48 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* View Mode: Focus View */}
-        {!treeLoading && activeTab === 'focus' && focusNeighborhood && (
+        {/* Focus Person Hub View */}
+        {currentWorkspace && activeTab === 'focus' && focusNeighborhood && (
           <FocusPersonView
-            data={focusNeighborhood}
+            neighborhood={focusNeighborhood}
             onSelectPerson={handleSelectPerson}
             onAddRelative={handleOpenAddRelative}
             onEditPerson={handleOpenEditPerson}
+            workspaceId={currentWorkspace.id}
           />
         )}
 
-        {/* View Mode: Bird's-Eye Map */}
-        {!treeLoading && activeTab === 'map' && (
+        {/* Multi-Generation Pedigree SVG Map View */}
+        {currentWorkspace && activeTab === 'map' && (
           <BirdseyeMapCanvas
-            people={treeOverview?.people || allPeople}
-            edges={treeOverview?.edges || []}
+            people={allPeople}
             focusPersonId={focusNeighborhood?.focus_person.id}
-            onSelectPerson={handleSelectPerson}
+            onSelectPerson={(id) => {
+              handleSelectPerson(id);
+              setActiveTab('focus');
+            }}
             onEditPerson={(p) => handleOpenEditPerson(p as PersonSummary)}
           />
         )}
 
-        {/* Empty State */}
-        {!treeLoading && !focusNeighborhood && allPeople.length === 0 && (
-          <div className="max-w-md mx-auto my-12 bg-white rounded-3xl p-8 border-2 border-slate-200 text-center shadow-lg">
-            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-300">
-              <UserPlus className="w-8 h-8 text-amber-700" />
+        {/* Empty Tree State (Prompt to add first person) */}
+        {currentWorkspace && !focusNeighborhood && !treeLoading && (
+          <div className="max-w-lg mx-auto mt-12 bg-white rounded-3xl p-8 border-2 border-slate-200 shadow-lg text-center space-y-6">
+            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto text-amber-700">
+              <UserPlus className="w-8 h-8 stroke-[2.5]" />
             </div>
-            <h2 className="text-2xl font-extrabold text-slate-900 mb-2">
-              Start Your Family Tree
-            </h2>
-            <p className="text-slate-600 text-sm mb-6">
-              Add the first person to begin building and exploring your lineage.
-            </p>
+
+            <div>
+              <h2 className="text-2xl font-black text-slate-900">Start Your Family Tree</h2>
+              <p className="text-slate-600 text-sm mt-1 font-medium">
+                Add yourself or the oldest known relative to begin building your family history.
+              </p>
+            </div>
 
             <form onSubmit={handleCreateRootPerson} className="space-y-4 text-left">
               <div>
                 <label htmlFor="root_first_name" className="block text-sm font-bold text-slate-800 mb-1">
-                  First Name <span className="text-red-600">*</span>
+                  First Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="root_first_name"
@@ -617,13 +558,13 @@ export const App: React.FC = () => {
                   type="text"
                   required
                   placeholder="e.g. Margaret"
-                  className="w-full px-3.5 py-2.5 rounded-lg border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
                 />
               </div>
 
               <div>
                 <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-800 mb-1">
-                  Last Name <span className="text-red-600">*</span>
+                  Last Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="root_last_name"
@@ -631,20 +572,20 @@ export const App: React.FC = () => {
                   type="text"
                   required
                   placeholder="e.g. Miller"
-                  className="w-full px-3.5 py-2.5 rounded-lg border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
                 />
               </div>
 
               <div>
                 <label htmlFor="root_birth_date" className="block text-sm font-bold text-slate-800 mb-1">
-                  Birth Year / Date
+                  Birth Date <span className="text-xs text-slate-400 font-normal">(Optional)</span>
                 </label>
                 <input
                   id="root_birth_date"
                   name="birth_date"
                   type="text"
-                  placeholder="e.g. 1942"
-                  className="w-full px-3.5 py-2.5 rounded-lg border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium"
+                  placeholder="e.g. 1942-05-12 or 1942"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
                 />
               </div>
 
@@ -688,12 +629,18 @@ export const App: React.FC = () => {
         onRemoveRelationship={handleRemoveRelationship}
       />
 
-      {/* Guided Conversational Interview Modal */}
-      <GuidedInterviewModal
-        isOpen={isInterviewModalOpen}
-        onClose={() => setIsInterviewModalOpen(false)}
-        basePersonName={focusPersonName}
-        onSubmit={handleGuidedInterviewSubmit}
+      {/* Create New Family / Workspace Modal */}
+      <CreateWorkspaceModal
+        isOpen={isCreateWorkspaceOpen}
+        onClose={() => setIsCreateWorkspaceOpen(false)}
+        onSubmit={handleCreateWorkspace}
+      />
+
+      {/* Super Admin Dashboard Modal */}
+      <SuperAdminDashboard
+        isOpen={isSuperAdminOpen}
+        onClose={() => setIsSuperAdminOpen(false)}
+        onSelectWorkspace={handleSelectWorkspaceFromAdmin}
       />
 
       {/* Activity Feed Modal */}

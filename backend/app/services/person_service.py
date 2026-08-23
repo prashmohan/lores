@@ -376,6 +376,24 @@ def add_relative_atomic(
                 )
             )
 
+    if actor:
+        record_audit_event(
+            db,
+            workspace_id,
+            actor.id,
+            actor.display_name,
+            actor.email,
+            "Relationship",
+            target_person.id,
+            "CREATE",
+            {
+                "action": "add_relative",
+                "relationship_type": relative_type,
+                "base_person": f"{base.first_name} {base.last_name}",
+                "target_person": f"{target_person.first_name} {target_person.last_name}",
+            },
+        )
+
     return target_person
 
 

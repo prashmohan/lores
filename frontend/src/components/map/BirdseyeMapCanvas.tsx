@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, User, Sparkles } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, User, Sparkles, Pencil, Eye, X } from 'lucide-react';
 import type { PersonRead, PersonSummary, TreeEdge } from '../../types/api';
 
 export type MapPerson = PersonRead | PersonSummary;
@@ -11,6 +11,7 @@ interface BirdseyeMapCanvasProps {
   edges?: TreeEdge[];
   focusPersonId?: string | null;
   onSelectPerson?: (personId: string) => void;
+  onEditPerson?: (person: MapPerson) => void;
 }
 
 interface PositionedNode {
@@ -37,11 +38,13 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   edges = EMPTY_EDGES,
   focusPersonId,
   onSelectPerson,
+  onEditPerson,
 }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const centeredPersonIdRef = useRef<string | null>(null);
 
@@ -491,7 +494,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
 
             {/* Person Nodes */}
             {nodes.map((node) => {
-              const isFocus = node.person.id === focusPersonId;
+              const isFocus = node.person.id === (selectedPersonId || focusPersonId);
               const fullName = `${node.person.first_name} ${node.person.last_name}`.trim();
 
               let datesLabel = '';
@@ -508,14 +511,17 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
               return (
                 <g
                   key={node.person.id}
+                  data-testid={`map-node-${node.person.id}`}
                   transform={`translate(${node.x}, ${node.y})`}
                   onClick={(e) => {
                     e.stopPropagation();
+                    setSelectedPersonId(node.person.id);
                     onSelectPerson?.(node.person.id);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
+                      setSelectedPersonId(node.person.id);
                       onSelectPerson?.(node.person.id);
                     }
                   }}
@@ -581,7 +587,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                       isFocus ? 'fill-slate-950 font-black' : 'fill-slate-900'
                     }`}
                   >
-                    {fullName.length > 16 ? `${fullName.slice(0, 15)}…` : fullName}
+                    {fullName.length > 15 ? `${fullName.slice(0, 14)}…` : fullName}
                   </text>
 
                   {/* Life Dates Text */}
@@ -594,18 +600,75 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                   >
                     {datesLabel || 'Family Member'}
                   </text>
-
-                  {/* Focus indicator badge */}
-                  {isFocus && (
-                    <g transform={`translate(${node.width - 24}, 8)`}>
-                      <circle cx="8" cy="8" r="6" fill="#f59e0b" />
-                    </g>
-                  )}
                 </g>
               );
             })}
           </g>
         </svg>
+      )}
+
+      {/* Floating Selected Person Action Bar */}
+      {selectedPersonId && (
+        (() => {
+          const selected = people.find((p) => p.id === selectedPersonId);
+          if (!selected) return null;
+          return (
+            <div
+              data-testid="map-selected-toolbar"
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-slate-900/95 backdrop-blur-md text-white border-2 border-amber-400 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                  {(selected.first_name?.[0] || '').toUpperCase()}
+                  {(selected.last_name?.[0] || '').toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-extrabold leading-tight">
+                    {selected.first_name} {selected.last_name}
+                  </p>
+                  <p className="text-[11px] text-slate-300 font-medium">
+                    {selected.birth_date ? `b. ${selected.birth_date}` : 'Family Member'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="h-6 w-px bg-slate-700" />
+
+              <div className="flex items-center gap-2">
+                {onEditPerson && (
+                  <button
+                    type="button"
+                    onClick={() => onEditPerson(selected)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow cursor-pointer flex items-center gap-1.5 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Edit Details</span>
+                  </button>
+                )}
+
+                {onSelectPerson && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectPerson(selected.id)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-600 cursor-pointer flex items-center gap-1.5 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Focus View</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedPersonId(null)}
+                  aria-label="Close selection bar"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })()
       )}
     </div>
   );

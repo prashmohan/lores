@@ -47,6 +47,12 @@ class AddRelativeRequest(BaseModel):
         return self.person or self.person_data
 
 
+class RemoveRelationshipRequest(BaseModel):
+    base_person_id: uuid.UUID
+    target_person_id: uuid.UUID
+    relationship_type: str  # "partner", "parent", "child"
+
+
 class TreeEdge(BaseModel):
     id: str
     source_id: str

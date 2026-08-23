@@ -1,16 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Trash2, AlertTriangle, Unlink, Heart, Users, ArrowUp, ArrowDown } from 'lucide-react';
 import type { PersonRead, PersonSummary, PersonUpdate } from '../../types/api';
 import { extractKnownPlaces, generateYearSuggestions } from '../../lib/autocomplete';
+
+export interface RelativeGroup {
+  parents: PersonSummary[];
+  partners: PersonSummary[];
+  children: PersonSummary[];
+  siblings?: PersonSummary[];
+}
 
 interface EditPersonModalProps {
   isOpen: boolean;
   onClose: () => void;
   person: PersonSummary | null;
   allPeople?: PersonRead[];
+  relatives?: RelativeGroup | null;
   onSave: (personId: string, updates: PersonUpdate) => Promise<void>;
   onDelete: (personId: string) => Promise<void>;
+  onRemoveRelationship?: (targetPersonId: string, relationshipType: 'partner' | 'parent' | 'child') => Promise<void>;
 }
 
 export const EditPersonModal: React.FC<EditPersonModalProps> = ({
@@ -18,8 +27,10 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   onClose,
   person,
   allPeople = [],
+  relatives = null,
   onSave,
   onDelete,
+  onRemoveRelationship,
 }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,6 +48,11 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState<{
+    target: PersonSummary;
+    type: 'partner' | 'parent' | 'child';
+    label: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen && person) {
@@ -110,6 +126,24 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
         setError(err.message);
       } else {
         setError('Failed to delete person.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDisconnectConfirm = async () => {
+    if (!confirmingDisconnect || !onRemoveRelationship) return;
+    setError(null);
+    setLoading(true);
+    try {
+      await onRemoveRelationship(confirmingDisconnect.target.id, confirmingDisconnect.type);
+      setConfirmingDisconnect(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to disconnect relationship.');
       }
     } finally {
       setLoading(false);
@@ -339,6 +373,163 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                   <option key={pl} value={pl} />
                 ))}
               </datalist>
+
+              {/* Family Relationships & Disconnect Management */}
+              {relatives && onRemoveRelationship && (
+                <div className="pt-3 border-t border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-amber-600" />
+                      <span>Family Relationships</span>
+                    </h3>
+                  </div>
+
+                  {confirmingDisconnect && (
+                    <div className="p-3.5 bg-amber-50 border-2 border-amber-300 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>
+                          Disconnect {confirmingDisconnect.target.first_name} {confirmingDisconnect.target.last_name} as {confirmingDisconnect.label}?
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-800">
+                        This will remove the relationship connection between {person.first_name} and {confirmingDisconnect.target.first_name}. It will not delete {confirmingDisconnect.target.first_name}&apos;s profile.
+                      </p>
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDisconnect(null)}
+                          disabled={loading}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white font-bold text-xs hover:bg-slate-50 cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectConfirm}
+                          disabled={loading}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow transition-colors cursor-pointer flex items-center gap-1"
+                        >
+                          <Unlink className="w-3.5 h-3.5" />
+                          <span>{loading ? 'Disconnecting...' : 'Confirm Disconnect'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {/* Parents */}
+                    {relatives.parents.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1">
+                            <ArrowUp className="w-3 h-3" />
+                            <span>Parent</span>
+                          </span>
+                          <span className="text-sm font-extrabold text-slate-900">
+                            {p.first_name} {p.last_name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmingDisconnect({
+                              target: p,
+                              type: 'parent',
+                              label: 'parent',
+                            })
+                          }
+                          disabled={loading}
+                          aria-label={`Disconnect parent ${p.first_name} ${p.last_name}`}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                        >
+                          <Unlink className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="hidden sm:inline text-rose-600">Disconnect</span>
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Partners */}
+                    {relatives.partners.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 flex items-center gap-1">
+                            <Heart className="w-3 h-3" />
+                            <span>Partner</span>
+                          </span>
+                          <span className="text-sm font-extrabold text-slate-900">
+                            {p.first_name} {p.last_name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmingDisconnect({
+                              target: p,
+                              type: 'partner',
+                              label: 'partner',
+                            })
+                          }
+                          disabled={loading}
+                          aria-label={`Disconnect partner ${p.first_name} ${p.last_name}`}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                        >
+                          <Unlink className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="hidden sm:inline text-rose-600">Disconnect</span>
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Children */}
+                    {relatives.children.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                            <ArrowDown className="w-3 h-3" />
+                            <span>Child</span>
+                          </span>
+                          <span className="text-sm font-extrabold text-slate-900">
+                            {c.first_name} {c.last_name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmingDisconnect({
+                              target: c,
+                              type: 'child',
+                              label: 'child',
+                            })
+                          }
+                          disabled={loading}
+                          aria-label={`Disconnect child ${c.first_name} ${c.last_name}`}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+                        >
+                          <Unlink className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="hidden sm:inline text-rose-600">Disconnect</span>
+                        </button>
+                      </div>
+                    ))}
+
+                    {relatives.parents.length === 0 &&
+                      relatives.partners.length === 0 &&
+                      relatives.children.length === 0 && (
+                        <p className="text-xs text-slate-500 italic py-1">
+                          No connected parents, partners, or children yet.
+                        </p>
+                      )}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label htmlFor="edit_biography" className="block text-sm font-bold text-slate-800 mb-1">

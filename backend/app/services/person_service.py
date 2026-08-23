@@ -489,3 +489,225 @@ def update_person_optimistic(
         )
 
     return person
+
+
+def remove_relationship_atomic(
+    db: Session,
+    workspace_id: uuid.UUID,
+    base_person_id: uuid.UUID,
+    target_person_id: uuid.UUID,
+    relationship_type: str,  # "partner", "parent", "child"
+    actor: User,
+) -> dict[str, Any]:
+    base = db.get(Person, base_person_id)
+    if not base or base.workspace_id != workspace_id or base.is_deleted:
+        raise ValueError("Base person not found in workspace")
+
+    target = db.get(Person, target_person_id)
+    if not target or target.workspace_id != workspace_id or target.is_deleted:
+        raise ValueError("Target person not found in workspace")
+
+    allowed_types = ("partner", "parent", "child")
+    if relationship_type not in allowed_types:
+        raise ValueError(f"Unsupported relationship type for removal: {relationship_type}")
+
+    now = datetime.now(UTC)
+
+    if relationship_type == "partner":
+        # Find active union between base and target
+        union_stmt = select(FamilyUnion).where(
+            FamilyUnion.workspace_id == workspace_id,
+            FamilyUnion.is_deleted.is_(False),
+            or_(
+                (FamilyUnion.partner1_id == base.id) & (FamilyUnion.partner2_id == target.id),
+                (FamilyUnion.partner1_id == target.id) & (FamilyUnion.partner2_id == base.id),
+            ),
+        )
+        union = db.scalar(union_stmt)
+        if not union:
+            raise ValueError("Active partnership not found between the specified individuals")
+
+        # Check for children attached to this union
+        children_stmt = select(ChildRelationship).where(
+            ChildRelationship.workspace_id == workspace_id,
+            ChildRelationship.union_id == union.id,
+            ChildRelationship.is_deleted.is_(False),
+        )
+        children = list(db.scalars(children_stmt).all())
+
+        if children:
+            # Preserve individual parental connections for each child
+            for p_id in [union.partner1_id, union.partner2_id]:
+                if not p_id:
+                    continue
+                # Find or create single parent union
+                single_union_stmt = select(FamilyUnion).where(
+                    FamilyUnion.workspace_id == workspace_id,
+                    FamilyUnion.is_deleted.is_(False),
+                    or_(
+                        (FamilyUnion.partner1_id == p_id) & (FamilyUnion.partner2_id.is_(None)),
+                        (FamilyUnion.partner2_id == p_id) & (FamilyUnion.partner1_id.is_(None)),
+                    ),
+                )
+                single_union = db.scalar(single_union_stmt)
+                if not single_union:
+                    single_union = FamilyUnion(
+                        workspace_id=workspace_id,
+                        partner1_id=p_id,
+                        partner2_id=None,
+                    )
+                    db.add(single_union)
+                    db.flush()
+
+                for c in children:
+                    # Add child relationship to single parent union if not existing
+                    exists = db.scalar(
+                        select(ChildRelationship).where(
+                            ChildRelationship.workspace_id == workspace_id,
+                            ChildRelationship.union_id == single_union.id,
+                            ChildRelationship.child_id == c.child_id,
+                            ChildRelationship.is_deleted.is_(False),
+                        )
+                    )
+                    if not exists:
+                        db.add(
+                            ChildRelationship(
+                                workspace_id=workspace_id,
+                                union_id=single_union.id,
+                                child_id=c.child_id,
+                                relationship_type=c.relationship_type,
+                            )
+                        )
+
+            # Soft-delete the original joint child relationships
+            for c in children:
+                c.is_deleted = True
+                c.deleted_at = now
+
+        # Soft-delete the joint union
+        union.is_deleted = True
+        union.deleted_at = now
+
+        record_audit_event(
+            db,
+            workspace_id,
+            actor.id,
+            actor.display_name,
+            actor.email,
+            "FamilyUnion",
+            union.id,
+            "DELETE",
+            {
+                "action": "disconnect_partner",
+                "partner1": f"{base.first_name} {base.last_name}",
+                "partner2": f"{target.first_name} {target.last_name}",
+            },
+        )
+        return {
+            "status": "success",
+            "message": f"Disconnected partnership between {base.first_name} and {target.first_name}",
+        }
+
+    # If parent/child relationship:
+    # Identify which person is parent and which is child
+    parent_person = target if relationship_type == "parent" else base
+    child_person = base if relationship_type == "parent" else target
+
+    # Find unions that include parent_person
+    parent_unions_stmt = select(FamilyUnion).where(
+        FamilyUnion.workspace_id == workspace_id,
+        FamilyUnion.is_deleted.is_(False),
+        or_(
+            FamilyUnion.partner1_id == parent_person.id,
+            FamilyUnion.partner2_id == parent_person.id,
+        ),
+    )
+    parent_unions = list(db.scalars(parent_unions_stmt).all())
+    union_ids = [u.id for u in parent_unions]
+
+    if not union_ids:
+        raise ValueError("No active parent unions found for the specified parent")
+
+    # Find the ChildRelationship linking this child to one of the parent's unions
+    child_rel_stmt = select(ChildRelationship).where(
+        ChildRelationship.workspace_id == workspace_id,
+        ChildRelationship.union_id.in_(union_ids),
+        ChildRelationship.child_id == child_person.id,
+        ChildRelationship.is_deleted.is_(False),
+    )
+    child_rel = db.scalar(child_rel_stmt)
+    if not child_rel:
+        raise ValueError("Parent-child relationship not found")
+
+    # Find the specific union for this relationship
+    target_union = next(u for u in parent_unions if u.id == child_rel.union_id)
+
+    # Check if there is another parent in this union
+    other_parent_id = (
+        target_union.partner2_id
+        if target_union.partner1_id == parent_person.id
+        else target_union.partner1_id
+    )
+
+    if other_parent_id:
+        # Transfer the child to a single-parent union with other_parent_id
+        single_union_stmt = select(FamilyUnion).where(
+            FamilyUnion.workspace_id == workspace_id,
+            FamilyUnion.is_deleted.is_(False),
+            or_(
+                (FamilyUnion.partner1_id == other_parent_id) & (FamilyUnion.partner2_id.is_(None)),
+                (FamilyUnion.partner2_id == other_parent_id) & (FamilyUnion.partner1_id.is_(None)),
+            ),
+        )
+        single_union = db.scalar(single_union_stmt)
+        if not single_union:
+            single_union = FamilyUnion(
+                workspace_id=workspace_id,
+                partner1_id=other_parent_id,
+                partner2_id=None,
+            )
+            db.add(single_union)
+            db.flush()
+
+        exists = db.scalar(
+            select(ChildRelationship).where(
+                ChildRelationship.workspace_id == workspace_id,
+                ChildRelationship.union_id == single_union.id,
+                ChildRelationship.child_id == child_person.id,
+                ChildRelationship.is_deleted.is_(False),
+            )
+        )
+        if not exists:
+            db.add(
+                ChildRelationship(
+                    workspace_id=workspace_id,
+                    union_id=single_union.id,
+                    child_id=child_person.id,
+                    relationship_type=child_rel.relationship_type,
+                )
+            )
+
+    # Soft-delete the child relationship to the removed parent's union
+    child_rel.is_deleted = True
+    child_rel.deleted_at = now
+
+    record_audit_event(
+        db,
+        workspace_id,
+        actor.id,
+        actor.display_name,
+        actor.email,
+        "ChildRelationship",
+        child_rel.id,
+        "DELETE",
+        {
+            "action": "disconnect_parent_child",
+            "parent": f"{parent_person.first_name} {parent_person.last_name}",
+            "child": f"{child_person.first_name} {child_person.last_name}",
+        },
+    )
+
+    return {
+        "status": "success",
+        "message": f"Disconnected {parent_person.first_name} as parent of {child_person.first_name}",
+    }

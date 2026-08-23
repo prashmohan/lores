@@ -146,6 +146,12 @@ export interface AddRelativeRequest {
   person_data?: PersonCreate;
 }
 
+export interface RemoveRelationshipRequest {
+  base_person_id: string;
+  target_person_id: string;
+  relationship_type: 'partner' | 'parent' | 'child' | string;
+}
+
 export interface TreeEdge {
   id: string;
   source_id: string;

@@ -8,7 +8,12 @@ from app.api.deps import get_current_user, get_workspace_role, require_role
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.person import PersonRead
-from app.schemas.tree import AddRelativeRequest, FocusNeighborhoodResponse, TreeOverviewResponse
+from app.schemas.tree import (
+    AddRelativeRequest,
+    FocusNeighborhoodResponse,
+    RemoveRelationshipRequest,
+    TreeOverviewResponse,
+)
 from app.services import person_service, tree_service
 
 router = APIRouter()
@@ -64,3 +69,27 @@ def add_relative(
     db.commit()
     db.refresh(new_person)
     return new_person
+
+
+@router.post("/remove-relationship")
+def remove_relationship(
+    workspace_id: uuid.UUID,
+    req: RemoveRelationshipRequest,
+    _role: str = Depends(require_role("collaborator")),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Any:
+    try:
+        result = person_service.remove_relationship_atomic(
+            db,
+            workspace_id=workspace_id,
+            base_person_id=req.base_person_id,
+            target_person_id=req.target_person_id,
+            relationship_type=req.relationship_type,
+            actor=current_user,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    db.commit()
+    return result

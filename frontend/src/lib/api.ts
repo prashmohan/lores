@@ -11,6 +11,7 @@ import type {
   PersonCreate,
   PersonRead,
   PersonUpdate,
+  RemoveRelationshipRequest,
   TokenResponse,
   TrashItemRead,
   TrashPurgeResponse,
@@ -172,6 +173,15 @@ export const api = {
 
     addRelative: (workspaceId: string, data: AddRelativeRequest): Promise<PersonRead> =>
       request<PersonRead>(`/workspaces/${workspaceId}/tree/add-relative`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    removeRelationship: (
+      workspaceId: string,
+      data: RemoveRelationshipRequest
+    ): Promise<{ status: string; message: string }> =>
+      request<{ status: string; message: string }>(`/workspaces/${workspaceId}/tree/remove-relationship`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),

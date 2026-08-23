@@ -15,7 +15,7 @@ import { Header } from './components/layout/Header';
 import { BreadcrumbBar, type BreadcrumbItem } from './components/layout/BreadcrumbBar';
 import { FocusPersonView, type RelativeType } from './components/tree/FocusPersonView';
 import { AddRelativeModal } from './components/tree/AddRelativeModal';
-import { EditPersonModal } from './components/tree/EditPersonModal';
+import { EditPersonModal, type RelativeGroup } from './components/tree/EditPersonModal';
 import { GuidedInterviewModal, type GuidedInterviewData } from './components/interview/GuidedInterviewModal';
 import { BirdseyeMapCanvas } from './components/map/BirdseyeMapCanvas';
 import { ActivityFeedModal } from './components/history/ActivityFeedModal';
@@ -32,6 +32,7 @@ export const App: React.FC = () => {
   const [focusHistory, setFocusHistory] = useState<BreadcrumbItem[]>([]);
   const [allPeople, setAllPeople] = useState<PersonRead[]>([]);
   const [treeOverview, setTreeOverview] = useState<TreeOverviewResponse | null>(null);
+  const [editingPersonRelatives, setEditingPersonRelatives] = useState<RelativeGroup | null>(null);
   const [highContrast, setHighContrast] = useState(() => {
     try {
       return localStorage.getItem('lores_theme_high_contrast') === 'true';
@@ -275,9 +276,31 @@ export const App: React.FC = () => {
   };
 
   // Open edit person modal
-  const handleOpenEditPerson = (person: PersonSummary) => {
+  const handleOpenEditPerson = async (person: PersonSummary) => {
     setEditingPerson(person);
     setIsEditModalOpen(true);
+    if (currentWorkspace) {
+      if (focusNeighborhood && focusNeighborhood.focus_person.id === person.id) {
+        setEditingPersonRelatives({
+          parents: focusNeighborhood.parents,
+          partners: focusNeighborhood.partners,
+          children: focusNeighborhood.children,
+          siblings: focusNeighborhood.siblings,
+        });
+      } else {
+        try {
+          const neigh = await api.tree.getFocusNeighborhood(currentWorkspace.id, person.id);
+          setEditingPersonRelatives({
+            parents: neigh.parents,
+            partners: neigh.partners,
+            children: neigh.children,
+            siblings: neigh.siblings,
+          });
+        } catch {
+          setEditingPersonRelatives(null);
+        }
+      }
+    }
   };
 
   // Save edited person
@@ -287,6 +310,35 @@ export const App: React.FC = () => {
     await refreshPeopleList();
     if (focusNeighborhood) {
       await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+    }
+  };
+
+  // Disconnect / remove family relationship
+  const handleRemoveRelationship = async (
+    targetPersonId: string,
+    relationshipType: 'partner' | 'parent' | 'child'
+  ) => {
+    if (!currentWorkspace || !editingPerson) return;
+    await api.tree.removeRelationship(currentWorkspace.id, {
+      base_person_id: editingPerson.id,
+      target_person_id: targetPersonId,
+      relationship_type: relationshipType,
+    });
+
+    await refreshPeopleList();
+    if (focusNeighborhood) {
+      await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id, false);
+    }
+    try {
+      const neigh = await api.tree.getFocusNeighborhood(currentWorkspace.id, editingPerson.id);
+      setEditingPersonRelatives({
+        parents: neigh.parents,
+        partners: neigh.partners,
+        children: neigh.children,
+        siblings: neigh.siblings,
+      });
+    } catch {
+      // ignore
     }
   };
 
@@ -537,6 +589,7 @@ export const App: React.FC = () => {
             edges={treeOverview?.edges || []}
             focusPersonId={focusNeighborhood?.focus_person.id}
             onSelectPerson={handleSelectPerson}
+            onEditPerson={(p) => handleOpenEditPerson(p as PersonSummary)}
           />
         )}
 
@@ -625,11 +678,14 @@ export const App: React.FC = () => {
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingPerson(null);
+          setEditingPersonRelatives(null);
         }}
         person={editingPerson}
         allPeople={allPeople}
+        relatives={editingPersonRelatives}
         onSave={handleSavePersonEdit}
         onDelete={handleDeletePerson}
+        onRemoveRelationship={handleRemoveRelationship}
       />
 
       {/* Guided Conversational Interview Modal */}

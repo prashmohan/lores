@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { BirdseyeMapCanvas, type MapPerson } from '../src/components/map/BirdseyeMapCanvas';
 
@@ -71,11 +71,11 @@ describe('BirdseyeMapCanvas', () => {
       />
     );
 
-    const arthurNode = screen.getByRole('button', { name: /Arthur Miller/i });
+    const arthurNode = screen.getByTestId('map-node-1');
     fireEvent.click(arthurNode);
     expect(onSelectPerson).toHaveBeenCalledWith('1');
 
-    const ronaldNode = screen.getByRole('button', { name: /Ronald Vance/i });
+    const ronaldNode = screen.getByTestId('map-node-4');
     fireEvent.click(ronaldNode);
     expect(onSelectPerson).toHaveBeenCalledWith('4');
   });
@@ -91,7 +91,7 @@ describe('BirdseyeMapCanvas', () => {
       />
     );
 
-    const margaretNode = screen.getByRole('button', { name: /Margaret Miller/i });
+    const margaretNode = screen.getByTestId('map-node-3');
     fireEvent.keyDown(margaretNode, { key: 'Enter' });
     expect(onSelectPerson).toHaveBeenCalledWith('3');
 
@@ -155,5 +155,41 @@ describe('BirdseyeMapCanvas', () => {
     expect(partnerStroke).toBe(true);
     expect(pcStroke).toBe(true);
   });
+
+  it('triggers onEditPerson and renders floating toolbar on selection', () => {
+    const onSelectPerson = vi.fn();
+    const onEditPerson = vi.fn();
+
+    render(
+      <BirdseyeMapCanvas
+        people={mockPeople}
+        focusPersonId="3"
+        onSelectPerson={onSelectPerson}
+        onEditPerson={onEditPerson}
+      />
+    );
+
+    // Click on Ronald Vance node
+    const ronaldNode = screen.getByTestId('map-node-4');
+    fireEvent.click(ronaldNode);
+
+    // Floating action bar appears
+    const toolbar = screen.getByTestId('map-selected-toolbar');
+    expect(toolbar).toBeInTheDocument();
+    expect(within(toolbar).getByText('Ronald Vance')).toBeInTheDocument();
+
+    // Click Edit Details from toolbar
+    const editDetailsBtn = within(toolbar).getByRole('button', { name: /^Edit Details$/i });
+    fireEvent.click(editDetailsBtn);
+    expect(onEditPerson).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '4', first_name: 'Ronald' })
+    );
+
+    // Click Focus View from toolbar
+    const focusViewBtn = within(toolbar).getByRole('button', { name: /^Focus View$/i });
+    fireEvent.click(focusViewBtn);
+    expect(onSelectPerson).toHaveBeenCalledWith('4');
+  });
 });
+
 

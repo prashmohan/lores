@@ -95,4 +95,77 @@ describe('EditPersonModal', () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  it('renders family relationships and triggers relationship disconnection', async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn();
+    const onDelete = vi.fn();
+    const onRemoveRelationship = vi.fn().mockResolvedValue(undefined);
+
+    const relatives = {
+      parents: [
+        {
+          id: 'parent-1',
+          first_name: 'Arthur',
+          last_name: 'Miller',
+          gender: 'male',
+          is_living: false,
+        },
+      ],
+      partners: [
+        {
+          id: 'partner-1',
+          first_name: 'George',
+          last_name: 'Vance',
+          gender: 'male',
+          is_living: true,
+        },
+      ],
+      children: [
+        {
+          id: 'child-1',
+          first_name: 'Ronald',
+          last_name: 'Vance',
+          gender: 'male',
+          is_living: true,
+        },
+      ],
+    };
+
+    render(
+      <EditPersonModal
+        isOpen={true}
+        onClose={onClose}
+        person={mockPerson}
+        relatives={relatives}
+        onSave={onSave}
+        onDelete={onDelete}
+        onRemoveRelationship={onRemoveRelationship}
+      />
+    );
+
+    expect(screen.getByText('Family Relationships')).toBeInTheDocument();
+    expect(screen.getByText('Arthur Miller')).toBeInTheDocument();
+    expect(screen.getByText('George Vance')).toBeInTheDocument();
+    expect(screen.getByText('Ronald Vance')).toBeInTheDocument();
+
+    // Click disconnect on partner George Vance
+    const disconnectPartnerBtn = screen.getByRole('button', {
+      name: /Disconnect partner George Vance/i,
+    });
+    fireEvent.click(disconnectPartnerBtn);
+
+    // Verify confirmation prompt
+    expect(
+      screen.getByText(/Disconnect George Vance as partner\?/i)
+    ).toBeInTheDocument();
+
+    // Confirm disconnect
+    fireEvent.click(screen.getByRole('button', { name: /Confirm Disconnect/i }));
+
+    await waitFor(() => {
+      expect(onRemoveRelationship).toHaveBeenCalledWith('partner-1', 'partner');
+    });
+  });
 });
+

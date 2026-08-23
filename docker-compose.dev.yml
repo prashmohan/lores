@@ -72,3 +72,4 @@ services:
 
 volumes:
   lores_data:
+    name: lores_lores_dev_data

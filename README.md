@@ -29,8 +29,10 @@ Traditional genealogy software often overwhelms families with sprawling, tangled
 - 🗺️ **Bird's-Eye SVG Map**: An interactive multi-generation pedigree map with smooth zoom, pan, and partner indicators for family-wide overviews.
 - 🔒 **Living Relative Privacy**: Living relatives have sensitive details automatically redacted for guest and unauthorized viewers.
 - ↩️ **30-Day Family Safety Net**: Every change is recorded in an immutable append-only audit trail. Deleted relatives and stories are held in a **30-day Family Trash Can** with 1-click restore.
-- 🛡️ **Multi-Tenant Workspaces & RBAC**: Isolated family workspaces with 4 distinct roles: `owner`, `admin`, `collaborator`, and `viewer`.
-- 🔑 **Passwordless OTP Authentication**: Frictionless, secure 6-digit email passcodes without passwords to remember.
+- 📷 **Photo Uploads & Avatar Cropping**: Upload family portraits with interactive client-side face cropping, circular previews, and avatar fallback initials.
+- 💾 **GEDCOM 5.5.1 & JSON Data Backup**: Comprehensive tree export and import with cycle protection and validation summary reports.
+- 🛡️ **Multi-Tenant Workspaces, Roles & Metadata**: Isolated family workspaces with customizable tree metadata (name and descriptions) and 4 distinct roles: `owner`, `admin`, `collaborator`, and `viewer`.
+- 🔑 **Passwordless OTP Authentication**: Frictionless, secure 6-digit email passcodes without passwords to remember (with optional Google SSO integration).
 - ♿ **Strict Accessibility (WCAG 2.1 AA/AAA)**: Integrated High-Contrast Mode, large touch targets ($\ge 44 \times 44\text{px}$), and automated axe-core testing across the entire interface.
 
 ---
@@ -43,19 +45,19 @@ Lores is structured as a full-stack monorepo:
 lores/
 ├── backend/                  # FastAPI (Python 3.12+), SQLAlchemy 2.0 (async), Pydantic v2, SQLite
 │   ├── app/
-│   │   ├── api/              # RESTful API router (v1 endpoints for auth, tree, workspaces, lore, trash)
+│   │   ├── api/              # RESTful API router (v1 endpoints for auth, tree, workspaces, lore, trash, backup)
 │   │   ├── db/               # Async engine, sessionmaker, base declarative model
 │   │   ├── models/           # SQLAlchemy models (User, Workspace, Person, FamilyUnion, LoreNote, AuditLog)
 │   │   ├── schemas/          # Pydantic v2 validation & response schemas
-│   │   └── services/         # Business logic (cycle detection, neighborhood graph, audit ledger, auth)
-│   └── tests/                # Pytest async test suite (87 tests, 100% passing)
+│   │   └── services/         # Business logic (cycle detection, neighborhood graph, audit ledger, GEDCOM exchange)
+│   └── tests/                # Pytest test suite (154 tests, 100% passing)
 ├── frontend/                 # React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons
 │   ├── e2e/                  # Playwright E2E browser accessibility test suite
 │   ├── src/
 │   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin)
 │   │   ├── lib/              # Type-safe API client and token storage
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (71 tests)
+│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (150 tests)
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
 └── docker-compose.yml        # Multi-stage production and development container orchestrations
@@ -195,12 +197,12 @@ This executes all 7 verification steps:
 
 | Step | Scope | Tool | Checks / Standard |
 | :--- | :--- | :--- | :--- |
-| **1** | Backend | `pytest` | **87** async unit & integration tests (100% pass) |
+| **1** | Backend | `pytest` | **154** async unit & integration tests (100% pass) |
 | **2** | Backend | `ruff` | PEP 8 linting & formatting compliance (`ruff check .` & `ruff format --check .`) |
 | **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
 | **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
 | **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
-| **6** | Frontend | `vitest` + `axe` | **71** component unit & `vitest-axe` DOM accessibility audits |
+| **6** | Frontend | `vitest` + `axe` | **150** component unit & `vitest-axe` DOM accessibility audits |
 | **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
 
 ---

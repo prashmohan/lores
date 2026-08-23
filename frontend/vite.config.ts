@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    allowedHosts: ['lores.thecloudytales.com', '.thecloudytales.com', 'localhost'],
     watch: mode === 'test' ? null : { usePolling: true },
     proxy: {
       '/api': {

@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days for senior friendly sessions
     OTP_EXPIRE_MINUTES: int = 15
 
+    # Email & SMTP Settings
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    EMAILS_FROM_EMAIL: str = "onboarding@resend.dev"
+    EMAILS_FROM_NAME: str = "Lores Family Tree"
+    SMTP_TLS: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

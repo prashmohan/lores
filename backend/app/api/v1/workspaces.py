@@ -16,7 +16,7 @@ from app.schemas.workspace import (
     WorkspaceMemberRead,
     WorkspaceRead,
 )
-from app.services import workspace_service
+from app.services import email_service, workspace_service
 
 router = APIRouter()
 
@@ -123,6 +123,18 @@ def add_member(
 
     db.commit()
     db.refresh(member)
+
+    # Fetch workspace metadata and send invitation email
+    ws = workspace_service.get_workspace_by_id(db, workspace_id)
+    ws_name = ws.name if ws else "Family Tree"
+    inviter_name = current_user.display_name or current_user.email
+    email_service.send_invitation_email(
+        to_email=target_user.email,
+        inviter_name=inviter_name,
+        workspace_name=ws_name,
+        role=req.role,
+    )
+
     return WorkspaceMemberRead(
         id=member.id,
         workspace_id=member.workspace_id,

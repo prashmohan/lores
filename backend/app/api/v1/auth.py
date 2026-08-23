@@ -7,7 +7,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import OTPRequest, OTPResponse, OTPVerifyRequest, TokenResponse, UserRead
-from app.services import auth_service
+from app.services import auth_service, email_service
 
 router = APIRouter()
 
@@ -19,6 +19,10 @@ def request_otp(
 ) -> dict[str, Any]:
     _token, raw_otp = auth_service.request_otp(db, email=req.email, display_name=req.display_name)
     db.commit()
+
+    # Dispatch verification email (via SMTP / Resend or console fallback)
+    email_service.send_otp_email(to_email=req.email, otp_code=raw_otp)
+
     return {
         "message": "OTP sent successfully",
         "email": req.email,

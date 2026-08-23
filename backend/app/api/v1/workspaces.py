@@ -10,6 +10,8 @@ from app.db.session import get_db
 from app.models.user import User
 from app.models.workspace import WorkspaceMember
 from app.schemas.workspace import (
+    MapLayoutRead,
+    MapLayoutUpdate,
     UserWorkspaceMembership,
     WorkspaceCreate,
     WorkspaceMemberCreate,
@@ -165,3 +167,45 @@ def remove_member(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
     db.commit()
     return {"message": "Member removed successfully"}
+
+
+@router.get("/{workspace_id}/map-layout", response_model=MapLayoutRead)
+def get_map_layout(
+    workspace_id: uuid.UUID,
+    _role: str = Depends(get_workspace_role),
+    db: Session = Depends(get_db),
+) -> Any:
+    ws = workspace_service.get_workspace_by_id(db, workspace_id)
+    if not ws:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    return MapLayoutRead(positions=ws.map_layout or {})
+
+
+@router.put("/{workspace_id}/map-layout", response_model=MapLayoutRead)
+def update_map_layout(
+    workspace_id: uuid.UUID,
+    payload: MapLayoutUpdate,
+    _role: str = Depends(require_role("collaborator")),
+    db: Session = Depends(get_db),
+) -> Any:
+    ws = workspace_service.get_workspace_by_id(db, workspace_id)
+    if not ws:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    ws.map_layout = payload.model_dump()["positions"]
+    db.commit()
+    db.refresh(ws)
+    return MapLayoutRead(positions=ws.map_layout or {})
+
+
+@router.delete("/{workspace_id}/map-layout")
+def reset_map_layout(
+    workspace_id: uuid.UUID,
+    _role: str = Depends(require_role("collaborator")),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    ws = workspace_service.get_workspace_by_id(db, workspace_id)
+    if not ws:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found")
+    ws.map_layout = None
+    db.commit()
+    return {"message": "Map layout reset to default"}

@@ -1,8 +1,9 @@
 import re
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -23,6 +24,7 @@ class Workspace(Base, TimestampMixin):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=False
     )
+    map_layout: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True, default=dict)
 
     members: Mapped[list["WorkspaceMember"]] = relationship(
         "WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan"

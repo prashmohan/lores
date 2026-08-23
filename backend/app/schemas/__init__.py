@@ -8,6 +8,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserRead,
 )
+from app.schemas.data_exchange import ImportSummaryRead
 from app.schemas.lore import (
     LoreNoteBase,
     LoreNoteCreate,
@@ -41,6 +42,7 @@ from app.schemas.workspace import (
 
 __all__ = [
     "FocusNeighborhoodResponse",
+    "ImportSummaryRead",
     "LoreNoteBase",
     "LoreNoteCreate",
     "LoreNoteRead",

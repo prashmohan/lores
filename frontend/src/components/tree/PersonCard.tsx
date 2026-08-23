@@ -47,7 +47,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
       : 'bg-white border-slate-200'
   } ${className}`;
 
-  const nameClasses = `font-extrabold leading-tight tracking-tight ${
+  const nameClasses = `font-extrabold leading-tight tracking-tight break-words ${
     isFocus ? 'text-2xl text-slate-950 font-black' : 'text-lg text-slate-900'
   }`;
 
@@ -98,7 +98,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className={`${nameClasses} group-hover:text-amber-900 transition-colors truncate`}>{fullName}</h3>
+            <h3 className={`${nameClasses} group-hover:text-amber-900 transition-colors`}>{fullName}</h3>
             <p className={dateClasses}>{dateText}</p>
             {person.birth_place && (
               <p className="text-xs text-slate-500 mt-0.5 truncate font-medium" title={person.birth_place}>
@@ -119,7 +119,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className={`${nameClasses} truncate`}>{fullName}</h3>
+            <h3 className={nameClasses}>{fullName}</h3>
             <p className={dateClasses}>{dateText}</p>
             {person.birth_place && (
               <p className="text-xs text-slate-500 mt-0.5 truncate font-medium" title={person.birth_place}>

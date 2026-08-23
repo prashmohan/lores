@@ -177,8 +177,17 @@ def test_person_cascade_soft_delete_and_restore(db_session):
     assert child.is_deleted is False
     assert rel.is_deleted is False
 
-    # Soft delete father (union should cascade)
+    # Soft delete father (union and rel stay active for mother)
     soft_delete_person(db_session, workspace_id, father.id, actor)
+    db_session.commit()
+
+    db_session.refresh(union)
+    db_session.refresh(rel)
+    assert union.is_deleted is False
+    assert rel.is_deleted is False
+
+    # Soft delete mother (now both parents soft-deleted, union cascades)
+    soft_delete_person(db_session, workspace_id, mother.id, actor)
     db_session.commit()
 
     db_session.refresh(union)

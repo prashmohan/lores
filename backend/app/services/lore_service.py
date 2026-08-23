@@ -179,18 +179,34 @@ def soft_delete_person(
         FamilyUnion.is_deleted.is_(False),
     )
     for union in db.scalars(union_stmt).all():
-        union.is_deleted = True
-        union.deleted_at = now
+        other_partner_id = (
+            union.partner2_id if union.partner1_id == person_id else union.partner1_id
+        )
+        other_partner = db.get(Person, other_partner_id) if other_partner_id else None
+        has_active_other_partner = (
+            other_partner is not None
+            and other_partner.workspace_id == workspace_id
+            and not other_partner.is_deleted
+        )
 
-        # Child relationships belonging to this union
+        # Check active child relationships belonging to this union
         union_ch_stmt = select(ChildRelationship).where(
             ChildRelationship.workspace_id == workspace_id,
             ChildRelationship.union_id == union.id,
             ChildRelationship.is_deleted.is_(False),
         )
-        for u_rel in db.scalars(union_ch_stmt).all():
-            u_rel.is_deleted = True
-            u_rel.deleted_at = now
+        union_children = list(db.scalars(union_ch_stmt).all())
+
+        if has_active_other_partner and union_children:
+            # Retain union for the active other parent so children remain connected
+            pass
+        else:
+            # Soft-delete union and its child relationships
+            union.is_deleted = True
+            union.deleted_at = now
+            for u_rel in union_children:
+                u_rel.is_deleted = True
+                u_rel.deleted_at = now
 
     record_audit_event(
         db,
@@ -407,6 +423,7 @@ def purge_trash(
         ).all()
     )
     for p in deleted_people:
+        # Clean up attached lore notes
         person_lores = list(
             db.scalars(
                 select(LoreNote).where(
@@ -416,6 +433,51 @@ def purge_trash(
         )
         for pl in person_lores:
             db.delete(pl)
+
+        # Clean up child relationships where p was the child
+        p_child_rels = list(
+            db.scalars(
+                select(ChildRelationship).where(
+                    ChildRelationship.workspace_id == workspace_id,
+                    ChildRelationship.child_id == p.id,
+                )
+            ).all()
+        )
+        for cr in p_child_rels:
+            db.delete(cr)
+
+        # Clean up or convert unions where p is a partner
+        p_unions = list(
+            db.scalars(
+                select(FamilyUnion).where(
+                    FamilyUnion.workspace_id == workspace_id,
+                    (FamilyUnion.partner1_id == p.id) | (FamilyUnion.partner2_id == p.id),
+                )
+            ).all()
+        )
+        for pu in p_unions:
+            other_partner_id = pu.partner2_id if pu.partner1_id == p.id else pu.partner1_id
+            other_partner = db.get(Person, other_partner_id) if other_partner_id else None
+            if other_partner and not other_partner.is_deleted:
+                # Convert union to single-parent union for the active partner so children remain connected
+                pu.partner1_id = other_partner_id
+                pu.partner2_id = None
+                pu.is_deleted = False
+                pu.deleted_at = None
+            else:
+                # Union has no active partner: delete associated child relationships and union
+                pu_rels = list(
+                    db.scalars(
+                        select(ChildRelationship).where(
+                            ChildRelationship.workspace_id == workspace_id,
+                            ChildRelationship.union_id == pu.id,
+                        )
+                    ).all()
+                )
+                for pur in pu_rels:
+                    db.delete(pur)
+                db.delete(pu)
+
         db.delete(p)
 
     total_purged = (

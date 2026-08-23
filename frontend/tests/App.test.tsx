@@ -74,6 +74,12 @@ describe('App navigation and modals', () => {
     vi.spyOn(api.workspaces, 'listMembers').mockResolvedValue([]);
     vi.spyOn(api.people, 'list').mockResolvedValue(mockPeople);
     vi.spyOn(api.tree, 'getFocusNeighborhood').mockResolvedValue(mockNeighborhood);
+    vi.spyOn(api.tree, 'getOverview').mockResolvedValue({
+      people: mockPeople,
+      edges: [
+        { id: 'edge-1', source_id: 'person-1', target_id: 'person-2', edge_type: 'partner' },
+      ],
+    });
     vi.spyOn(api.trash, 'getAuditLogs').mockResolvedValue([]);
     vi.spyOn(api.trash, 'list').mockResolvedValue([]);
   });
@@ -89,8 +95,36 @@ describe('App navigation and modals', () => {
     });
   });
 
-  it('switches to BirdseyeMapCanvas when Bird\'s-Eye Map tab is clicked', async () => {
-    render(<App />);
+  it('switches to BirdseyeMapCanvas when Bird\'s-Eye Map tab is clicked and renders edges', async () => {
+    const multiPeople: PersonRead[] = [
+      mockPeople[0],
+      {
+        id: 'person-2',
+        workspace_id: 'ws-1',
+        first_name: 'Arthur',
+        last_name: 'Miller',
+        gender: 'male',
+        is_living: false,
+        birth_date: '1915',
+        birth_date_qualifier: 'exact',
+        birth_place: 'New York, NY',
+        death_date: '2005',
+        death_date_qualifier: 'exact',
+        death_place: null,
+        is_deleted: false,
+        created_at: '2026-08-23T00:00:00Z',
+        updated_at: '2026-08-23T00:00:00Z',
+      },
+    ];
+    vi.spyOn(api.people, 'list').mockResolvedValue(multiPeople);
+    vi.spyOn(api.tree, 'getOverview').mockResolvedValue({
+      people: multiPeople,
+      edges: [
+        { id: 'edge-1', source_id: 'person-1', target_id: 'person-2', edge_type: 'partner' },
+      ],
+    });
+
+    const { container } = render(<App />);
 
     await waitFor(() => {
       expect(screen.getByRole('tab', { name: /Bird's-Eye Map/i })).toBeInTheDocument();
@@ -100,6 +134,14 @@ describe('App navigation and modals', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('region', { name: /Family Tree Overview Map/i })).toBeInTheDocument();
+    });
+
+    // Verify connecting edge paths exist in the SVG
+    await waitFor(() => {
+      const paths = container.querySelectorAll('svg g g path');
+      expect(paths.length).toBeGreaterThan(0);
+      const hasPartnerColor = Array.from(paths).some((p) => p.getAttribute('stroke') === '#f43f5e');
+      expect(hasPartnerColor).toBe(true);
     });
   });
 
@@ -159,4 +201,47 @@ describe('App navigation and modals', () => {
       expect(screen.getByText(/30-Day Recovery Bin/i)).toBeInTheDocument();
     });
   });
+
+  it('opens DataBackupModal when Data & Backup button is clicked in header for admin', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Manage Family Data and Backup/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Manage Family Data and Backup/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Data & Backup/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Export Family Tree/i })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: /Import Family Tree/i })).toBeInTheDocument();
+    });
+  });
+
+  it('fetches map layout and passes server positions to BirdseyeMapCanvas', async () => {
+    const getMapLayoutSpy = vi.spyOn(api.workspaces, 'getMapLayout').mockResolvedValue({
+      positions: {
+        'person-1': { x: 777, y: 888 },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tab', { name: /Bird's-Eye Map/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: /Bird's-Eye Map/i }));
+
+    await waitFor(() => {
+      expect(getMapLayoutSpy).toHaveBeenCalledWith('ws-1');
+    });
+
+    await waitFor(() => {
+      const node1 = screen.getByTestId('map-node-person-1');
+      expect(node1).toBeInTheDocument();
+      expect(node1.getAttribute('transform')).toContain('translate(777, 888)');
+    });
+  });
 });
+

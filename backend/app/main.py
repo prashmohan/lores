@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import models
 from app.api.v1.router import api_router
 from app.config import get_settings
-from app.db.base import Base
+from app.db.init_db import init_db
 from app.db.session import engine
 
 # Ensure model metadata is registered
@@ -20,9 +20,9 @@ logger = logging.getLogger("lores.main")
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     try:
-        Base.metadata.create_all(bind=engine)
+        init_db(engine)
     except SQLAlchemyError as exc:
-        logger.warning("Database table initialization deferred: %s", exc)
+        logger.warning("Database table initialization/migration deferred: %s", exc)
     yield
 
 

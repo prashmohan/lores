@@ -1,11 +1,23 @@
 import uuid
+from collections.abc import Generator
 from datetime import UTC, datetime
 
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+from app import models
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
 from app.models.user import User
 from app.models.workspace import Workspace, WorkspaceMember, slugify
 from app.schemas.workspace import (
+    MapLayoutRead,
+    MapLayoutUpdate,
+    MapNodePosition,
     UserWorkspaceMembership,
     WorkspaceCreate,
     WorkspaceMemberCreate,
@@ -26,6 +38,65 @@ from app.services.workspace_service import (
     list_workspace_members,
     remove_member,
 )
+
+_ = models
+
+
+@pytest.fixture(name="client")
+def fixture_client() -> Generator[TestClient, None, None]:
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
+captured_otps: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def capture_emails(monkeypatch):
+    captured_otps.clear()
+
+    def fake_send_otp_email(to_email: str, otp_code: str) -> bool:
+        captured_otps[to_email.lower().strip()] = otp_code
+        return True
+
+    monkeypatch.setattr("app.services.email_service.send_otp_email", fake_send_otp_email)
+
+
+def helper_login(client: TestClient, email: str, display_name: str | None = None) -> dict[str, str]:
+    req_res = client.post(
+        "/api/v1/auth/request-otp",
+        json={"email": email, "display_name": display_name or email.split("@")[0]},
+    )
+    assert req_res.status_code == 200
+    assert "dev_otp" not in req_res.json()
+    otp = captured_otps.get(email.lower().strip())
+    assert otp is not None
+
+    verify_res = client.post(
+        "/api/v1/auth/verify-otp",
+        json={"email": email, "code": otp},
+    )
+    assert verify_res.status_code == 200
+    token = verify_res.json()["token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_create_workspace_assigns_admin(db_session):
@@ -400,3 +471,124 @@ def test_sole_admin_cannot_be_removed_or_demoted(db_session):
     db_session.commit()
 
     assert remove_member(db_session, workspace_id=ws.id, user_id=admin.id) is True
+
+
+def test_map_layout_schemas():
+    pos = MapNodePosition(x=120.5, y=340.0)
+    assert pos.x == 120.5
+    assert pos.y == 340.0
+
+    read = MapLayoutRead(positions={"node-1": pos})
+    assert "node-1" in read.positions
+    assert read.positions["node-1"].x == 120.5
+    assert read.positions["node-1"].y == 340.0
+
+    empty_read = MapLayoutRead()
+    assert empty_read.positions == {}
+
+    update = MapLayoutUpdate(positions={"node-1": pos})
+    assert update.positions["node-1"].y == 340.0
+
+
+def test_workspace_model_map_layout_field(db_session):
+    user = User(email="layout_model@example.com", display_name="Layout Model User")
+    db_session.add(user)
+    db_session.commit()
+
+    ws = create_workspace(db_session, name="Layout Model Tree", user_id=user.id)
+    db_session.commit()
+
+    assert ws.map_layout == {} or ws.map_layout is None
+
+    ws.map_layout = {"person-abc": {"x": 50.0, "y": 150.0}}
+    db_session.commit()
+    db_session.refresh(ws)
+
+    assert ws.map_layout == {"person-abc": {"x": 50.0, "y": 150.0}}
+
+
+def test_map_layout_api_lifecycle_and_rbac(client: TestClient) -> None:
+    admin_headers = helper_login(client, "layout_admin@example.com", "Layout Admin")
+    collab_headers = helper_login(client, "layout_collab@example.com", "Layout Collab")
+    viewer_headers = helper_login(client, "layout_viewer@example.com", "Layout Viewer")
+
+    # 1. Admin creates workspace
+    ws_resp = client.post(
+        "/api/v1/workspaces",
+        headers=admin_headers,
+        json={"name": "Layout Workspace", "description": "Testing map layout"},
+    )
+    assert ws_resp.status_code == 200
+    ws_id = ws_resp.json()["id"]
+
+    # 2. Add collaborator and viewer
+    client.post(
+        f"/api/v1/workspaces/{ws_id}/members",
+        headers=admin_headers,
+        json={"email": "layout_collab@example.com", "role": "collaborator"},
+    )
+    client.post(
+        f"/api/v1/workspaces/{ws_id}/members",
+        headers=admin_headers,
+        json={"email": "layout_viewer@example.com", "role": "viewer"},
+    )
+
+    # 3. GET returns empty dict when no layout saved (for admin, collab, viewer)
+    get_empty_admin = client.get(f"/api/v1/workspaces/{ws_id}/map-layout", headers=admin_headers)
+    assert get_empty_admin.status_code == 200
+    assert get_empty_admin.json() == {"positions": {}}
+
+    get_empty_viewer = client.get(f"/api/v1/workspaces/{ws_id}/map-layout", headers=viewer_headers)
+    assert get_empty_viewer.status_code == 200
+    assert get_empty_viewer.json() == {"positions": {}}
+
+    # 4. Viewer receives 403 on PUT and DELETE
+    put_payload = {
+        "positions": {
+            "person-1": {"x": 100.0, "y": 200.0},
+            "union-1": {"x": 300.5, "y": 400.25},
+        }
+    }
+    viewer_put = client.put(
+        f"/api/v1/workspaces/{ws_id}/map-layout",
+        headers=viewer_headers,
+        json=put_payload,
+    )
+    assert viewer_put.status_code == 403
+
+    viewer_del = client.delete(
+        f"/api/v1/workspaces/{ws_id}/map-layout",
+        headers=viewer_headers,
+    )
+    assert viewer_del.status_code == 403
+
+    # 5. Collaborator PUT saves node coordinates and returns them
+    collab_put = client.put(
+        f"/api/v1/workspaces/{ws_id}/map-layout",
+        headers=collab_headers,
+        json=put_payload,
+    )
+    assert collab_put.status_code == 200
+    saved_data = collab_put.json()
+    assert "positions" in saved_data
+    assert saved_data["positions"]["person-1"] == {"x": 100.0, "y": 200.0}
+    assert saved_data["positions"]["union-1"] == {"x": 300.5, "y": 400.25}
+
+    # 6. GET returns saved coordinates for viewer
+    viewer_get_saved = client.get(f"/api/v1/workspaces/{ws_id}/map-layout", headers=viewer_headers)
+    assert viewer_get_saved.status_code == 200
+    assert viewer_get_saved.json()["positions"]["person-1"] == {"x": 100.0, "y": 200.0}
+    assert viewer_get_saved.json()["positions"]["union-1"] == {"x": 300.5, "y": 400.25}
+
+    # 7. Collaborator DELETE clears coordinates
+    collab_del = client.delete(
+        f"/api/v1/workspaces/{ws_id}/map-layout",
+        headers=collab_headers,
+    )
+    assert collab_del.status_code == 200
+    assert collab_del.json() == {"message": "Map layout reset to default"}
+
+    # 8. GET after DELETE returns empty dict
+    get_after_del = client.get(f"/api/v1/workspaces/{ws_id}/map-layout", headers=viewer_headers)
+    assert get_after_del.status_code == 200
+    assert get_after_del.json() == {"positions": {}}

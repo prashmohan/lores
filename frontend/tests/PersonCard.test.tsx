@@ -79,4 +79,23 @@ describe('PersonCard', () => {
     expect(card.className).toContain('bg-amber-50');
     expect(card.className).toContain('border-amber-500');
   });
+
+  it('allows long names to flow to next line without truncation', () => {
+    const longNamePerson: PersonSummary = {
+      ...mockPerson,
+      first_name: 'Alexandrina Victoria',
+      last_name: 'Saxe-Coburg-Gotha-Battenberg',
+    };
+
+    const { rerender } = render(<PersonCard person={longNamePerson} />);
+    const nameHeading = screen.getByRole('heading', { level: 3, name: 'Alexandrina Victoria Saxe-Coburg-Gotha-Battenberg' });
+    expect(nameHeading.className).not.toContain('truncate');
+    expect(nameHeading.className).toContain('break-words');
+
+    // Also test clickable version
+    rerender(<PersonCard person={longNamePerson} onClick={() => {}} />);
+    const clickableHeading = screen.getByRole('heading', { level: 3, name: 'Alexandrina Victoria Saxe-Coburg-Gotha-Battenberg' });
+    expect(clickableHeading.className).not.toContain('truncate');
+    expect(clickableHeading.className).toContain('break-words');
+  });
 });

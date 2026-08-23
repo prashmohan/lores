@@ -1,7 +1,20 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class MapNodePosition(BaseModel):
+    x: float
+    y: float
+
+
+class MapLayoutRead(BaseModel):
+    positions: dict[str, MapNodePosition] = Field(default_factory=dict)
+
+
+class MapLayoutUpdate(BaseModel):
+    positions: dict[str, MapNodePosition] = Field(default_factory=dict)
 
 
 class WorkspaceBase(BaseModel):

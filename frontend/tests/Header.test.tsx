@@ -161,4 +161,127 @@ describe('Header', () => {
     fireEvent.click(adminBtn);
     expect(onOpenSuperAdmin).toHaveBeenCalledTimes(1);
   });
+
+  it('renders Data & Backup button for admin role and triggers onOpenDataBackup', () => {
+    const onOpenDataBackup = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        userRole="admin"
+        onSelectWorkspace={vi.fn()}
+        onOpenDataBackup={onOpenDataBackup}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const backupBtn = screen.getByRole('button', { name: /Manage Family Data and Backup/i });
+    expect(backupBtn).toBeInTheDocument();
+    expect(screen.getByText('Data & Backup')).toBeInTheDocument();
+    fireEvent.click(backupBtn);
+    expect(onOpenDataBackup).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Data & Backup button for owner role', () => {
+    const onOpenDataBackup = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={[{ workspace: mockWorkspace, role: 'owner' }]}
+        currentWorkspace={mockWorkspace}
+        userRole="owner"
+        onSelectWorkspace={vi.fn()}
+        onOpenDataBackup={onOpenDataBackup}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Manage Family Data and Backup/i })).toBeInTheDocument();
+  });
+
+  it('renders Data & Backup button for superadmin even if workspace role is viewer', () => {
+    const onOpenDataBackup = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockSuperAdmin}
+        workspaces={[{ workspace: mockWorkspace, role: 'viewer' }]}
+        currentWorkspace={mockWorkspace}
+        userRole="viewer"
+        onSelectWorkspace={vi.fn()}
+        onOpenDataBackup={onOpenDataBackup}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Manage Family Data and Backup/i })).toBeInTheDocument();
+  });
+
+  it('does NOT render Data & Backup button for collaborator role', () => {
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={[{ workspace: mockWorkspace, role: 'collaborator' }]}
+        currentWorkspace={mockWorkspace}
+        userRole="collaborator"
+        onSelectWorkspace={vi.fn()}
+        onOpenDataBackup={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Manage Family Data and Backup/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Data & Backup')).not.toBeInTheDocument();
+  });
+
+  it('does NOT render Data & Backup button for viewer role', () => {
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={[{ workspace: mockWorkspace, role: 'viewer' }]}
+        currentWorkspace={mockWorkspace}
+        userRole="viewer"
+        onSelectWorkspace={vi.fn()}
+        onOpenDataBackup={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Manage Family Data and Backup/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Data & Backup')).not.toBeInTheDocument();
+  });
+
+  it('passes axe accessibility audit when Data & Backup button is rendered', async () => {
+    const { axe } = await import('vitest-axe');
+    const { container } = render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        userRole="admin"
+        onSelectWorkspace={vi.fn()}
+        onOpenMembers={vi.fn()}
+        onOpenDataBackup={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
 });

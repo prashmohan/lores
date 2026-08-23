@@ -22,7 +22,6 @@ export interface OTPRequest {
 export interface OTPResponse {
   message: string;
   email: string;
-  dev_otp?: string | null;
 }
 
 export interface OTPVerifyRequest {

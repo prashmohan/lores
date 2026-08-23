@@ -3,7 +3,7 @@ import { Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface LoginFormProps {
-  onOtpRequested: (email: string, devOtp?: string | null) => void;
+  onOtpRequested: (email: string) => void;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
@@ -27,7 +27,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
         email: email.trim().toLowerCase(),
         display_name: displayName.trim() || undefined,
       });
-      onOtpRequested(res.email, res.dev_otp);
+      onOtpRequested(res.email);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -40,16 +40,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
   };
 
   return (
-    <div className="w-full max-w-md bg-white rounded-3xl p-8 border-2 border-slate-200 shadow-xl">
+    <div className="w-full max-w-md bg-white rounded-3xl p-8 border-2 border-slate-200/90 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-amber-400 via-amber-500 to-amber-600" />
+      
       <div className="text-center mb-6">
-        <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-300">
-          <Mail className="w-7 h-7 text-amber-700" />
+        <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-amber-200 shadow-xs">
+          <Mail className="w-7 h-7 text-amber-700 stroke-[2.2]" />
         </div>
         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
           Welcome to Lores
         </h2>
         <p className="text-slate-600 text-sm mt-2 font-medium">
-          Sign in without a password. We will send a secure 6-digit code to your email.
+          Sign in without a password. We will send a secure 6-digit passcode to your email.
         </p>
       </div>
 
@@ -74,8 +76,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. grandpa.miller@example.com"
-            className="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="e.g. margaret@family.org"
+            className="w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base text-slate-900 placeholder:text-slate-400 font-medium transition-all outline-none"
           />
         </div>
 
@@ -88,8 +90,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g. Arthur Miller"
-            className="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 placeholder:text-slate-400 font-medium"
+            placeholder="e.g. Margaret Miller"
+            className="w-full px-4 py-3.5 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base text-slate-900 placeholder:text-slate-400 font-medium transition-all outline-none"
           />
         </div>
 
@@ -103,7 +105,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
           ) : (
             <>
               <span>Send Verification Code</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 stroke-[2.5]" />
             </>
           )}
         </button>
@@ -111,7 +113,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested }) => {
 
       <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center gap-2 text-xs font-semibold text-slate-500">
         <ShieldCheck className="w-4 h-4 text-emerald-600" />
-        <span>Safe, secure, and password-free</span>
+        <span>Safe, private, and password-free</span>
       </div>
     </div>
   );

@@ -178,3 +178,32 @@ def test_request_new_otp_invalidates_prior_pending_otp(db_session):
     user, jwt_token = verify_otp(db_session, email=email, code=otp2)
     assert user.email == email
     assert jwt_token is not None
+
+
+def test_otp_lockout_after_5_failed_attempts(db_session):
+    email = "lockout_target@example.com"
+    token, valid_otp = request_otp(db_session, email=email, display_name="Target")
+    db_session.commit()
+
+    # 4 incorrect attempts
+    for _ in range(4):
+        with pytest.raises(ValueError, match="Invalid or expired"):
+            verify_otp(db_session, email=email, code="000000")
+        db_session.commit()
+
+    db_session.refresh(token)
+    assert token.failed_attempts == 4
+    assert token.used_at is None
+
+    # 5th incorrect attempt -> triggers lockout and invalidates token
+    with pytest.raises(ValueError, match="Too many failed attempts"):
+        verify_otp(db_session, email=email, code="000000")
+    db_session.commit()
+
+    db_session.refresh(token)
+    assert token.failed_attempts == 5
+    assert token.used_at is not None
+
+    # Subsequent attempt even with the correct valid OTP must fail
+    with pytest.raises(ValueError, match="Invalid or expired"):
+        verify_otp(db_session, email=email, code=valid_otp)

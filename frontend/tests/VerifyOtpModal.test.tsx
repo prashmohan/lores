@@ -16,9 +16,17 @@ describe('VerifyOtpModal', () => {
   it('submits code and triggers onSuccess', async () => {
     const onSuccess = vi.fn();
     const onBack = vi.fn();
-    (api.auth.verifyOtp as any).mockResolvedValue({
+    vi.mocked(api.auth.verifyOtp).mockResolvedValue({
       access_token: 'jwt.token.here',
-      user: { id: 'u1', email: 'test@example.com', display_name: 'Tester' },
+      token: 'jwt.token.here',
+      token_type: 'bearer',
+      user: {
+        id: 'u1',
+        email: 'test@example.com',
+        display_name: 'Tester',
+        is_superadmin: false,
+        created_at: new Date().toISOString(),
+      },
     });
 
     render(

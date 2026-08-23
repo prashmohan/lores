@@ -38,13 +38,29 @@ def fixture_client() -> Generator[TestClient, None, None]:
     Base.metadata.drop_all(bind=engine)
 
 
+captured_otps: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def capture_emails(monkeypatch):
+    captured_otps.clear()
+
+    def fake_send_otp_email(to_email: str, otp_code: str) -> bool:
+        captured_otps[to_email.lower().strip()] = otp_code
+        return True
+
+    monkeypatch.setattr("app.services.email_service.send_otp_email", fake_send_otp_email)
+
+
 def helper_login(client: TestClient, email: str, display_name: str | None = None) -> dict[str, str]:
     req_res = client.post(
         "/api/v1/auth/request-otp",
         json={"email": email, "display_name": display_name or email.split("@")[0]},
     )
     assert req_res.status_code == 200
-    otp = req_res.json()["dev_otp"]
+    assert "dev_otp" not in req_res.json()
+    otp = captured_otps.get(email.lower().strip())
+    assert otp is not None
 
     verify_res = client.post(
         "/api/v1/auth/verify-otp",

@@ -7,7 +7,6 @@ import type { UserRead } from '../../types/api';
 interface VerifyOtpModalProps {
   isOpen: boolean;
   email: string;
-  devOtp?: string | null;
   onSuccess: (user?: UserRead | null) => void;
   onBack: () => void;
 }
@@ -15,17 +14,14 @@ interface VerifyOtpModalProps {
 export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
   isOpen,
   email,
-  devOtp,
   onSuccess,
   onBack,
 }) => {
-  const [code, setCode] = useState(devOtp || '');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(
-    devOtp ? `Development Mode: OTP auto-filled with ${devOtp}` : null
-  );
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,13 +55,8 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
     setError(null);
     setInfoMessage(null);
     try {
-      const res = await api.auth.requestOtp({ email });
-      if (res.dev_otp) {
-        setCode(res.dev_otp);
-        setInfoMessage(`New code generated: ${res.dev_otp}`);
-      } else {
-        setInfoMessage('A new 6-digit code has been sent to your email.');
-      }
+      await api.auth.requestOtp({ email });
+      setInfoMessage('A new 6-digit code has been sent to your email.');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

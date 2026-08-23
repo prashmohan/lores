@@ -12,7 +12,6 @@ class OTPRequest(BaseModel):
 class OTPResponse(BaseModel):
     message: str
     email: str
-    dev_otp: str | None = None
 
 
 class OTPVerifyRequest(BaseModel):

@@ -277,7 +277,7 @@ def test_invalid_role_raises_error(db_session):
     ws = create_workspace(db_session, name="Role Test Tree", user_id=user.id)
     db_session.commit()
 
-    with pytest.raises(ValueError, match="Invalid role"):
+    with pytest.raises(ValueError, match="Invalid.*role"):
         add_or_update_member(
             db_session,
             workspace_id=ws.id,
@@ -343,3 +343,60 @@ def test_workspace_schemas():
     membership = UserWorkspaceMembership(workspace=ws_read, role="admin")
     assert membership.role == "admin"
     assert membership.workspace.name == "My Family"
+
+
+def test_cannot_assign_superadmin_role_to_workspace_member(db_session):
+    user = User(email="super_attempt@example.com", display_name="User")
+    db_session.add(user)
+    db_session.commit()
+
+    ws = create_workspace(db_session, name="Escalation Test", user_id=user.id)
+    db_session.commit()
+
+    with pytest.raises(ValueError, match="Invalid.*role"):
+        add_or_update_member(
+            db_session,
+            workspace_id=ws.id,
+            user_id=user.id,
+            role="superadmin",
+            actor_id=user.id,
+        )
+
+
+def test_sole_admin_cannot_be_removed_or_demoted(db_session):
+    admin = User(email="only_admin@example.com", display_name="Sole Admin")
+    db_session.add(admin)
+    db_session.commit()
+
+    ws = create_workspace(db_session, name="Solo Admin Tree", user_id=admin.id)
+    db_session.commit()
+
+    # 1. Demoting sole admin to viewer must fail
+    with pytest.raises(ValueError, match="Cannot demote the sole administrator"):
+        add_or_update_member(
+            db_session,
+            workspace_id=ws.id,
+            user_id=admin.id,
+            role="viewer",
+            actor_id=admin.id,
+        )
+
+    # 2. Removing sole admin must fail
+    with pytest.raises(ValueError, match="Cannot remove the sole administrator"):
+        remove_member(db_session, workspace_id=ws.id, user_id=admin.id)
+
+    # 3. Add second admin -> removal of first admin now succeeds
+    admin2 = User(email="admin2@example.com", display_name="Admin Two")
+    db_session.add(admin2)
+    db_session.commit()
+
+    add_or_update_member(
+        db_session,
+        workspace_id=ws.id,
+        user_id=admin2.id,
+        role="admin",
+        actor_id=admin.id,
+    )
+    db_session.commit()
+
+    assert remove_member(db_session, workspace_id=ws.id, user_id=admin.id) is True

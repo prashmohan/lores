@@ -22,7 +22,20 @@ import { FamilyMembersModal } from './components/workspace/FamilyMembersModal';
 import { SuperAdminDashboard } from './components/admin/SuperAdminDashboard';
 import { LoginForm } from './components/auth/LoginForm';
 import { VerifyOtpModal } from './components/auth/VerifyOtpModal';
-import { UserPlus, Plus, Loader2, Compass, Network, History, Trash2 } from 'lucide-react';
+import {
+  Plus,
+  Loader2,
+  Compass,
+  Network,
+  History,
+  Trash2,
+  TreePine,
+  Sparkles,
+  BookOpen,
+  ShieldCheck,
+  Heart,
+  Lock,
+} from 'lucide-react';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<UserRead | null>(null);
@@ -44,7 +57,6 @@ export const App: React.FC = () => {
 
   // Auth flow states
   const [authEmail, setAuthEmail] = useState<string | null>(null);
-  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
 
   // Modal states
@@ -205,16 +217,14 @@ export const App: React.FC = () => {
   };
 
   // Auth callbacks
-  const handleOtpRequested = (email: string, otpDev?: string | null) => {
+  const handleOtpRequested = (email: string) => {
     setAuthEmail(email);
-    setDevOtp(otpDev || null);
     setIsVerifyOpen(true);
   };
 
   const handleAuthSuccess = () => {
     setIsVerifyOpen(false);
     setAuthEmail(null);
-    setDevOtp(null);
     loadUserData();
   };
 
@@ -401,21 +411,248 @@ export const App: React.FC = () => {
   // Render Login View if not logged in
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Lores</h1>
-          <p className="text-sm font-semibold text-slate-600 mt-1">
-            Accessible, senior-friendly family tree and oral history builder.
-          </p>
-        </div>
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-amber-200">
+        {/* Top Public Header */}
+        <header className="w-full border-b-2 border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-950 shadow-sm ring-2 ring-amber-300">
+                <TreePine className="w-6 h-6 stroke-[2.4]" />
+              </div>
+              <div>
+                <span className="text-xl font-black tracking-tight text-slate-900 leading-none block">
+                  Lores
+                </span>
+                <span className="text-2xs font-extrabold uppercase tracking-wider text-amber-700 block mt-0.5">
+                  Family History & Oral Lore
+                </span>
+              </div>
+            </div>
 
-        <LoginForm onOtpRequested={handleOtpRequested} />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>100% Private & Open Source</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-900">
+                <Sparkles className="w-4 h-4 text-amber-600" />
+                <span>WCAG 2.1 AAA</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Hero Column */}
+            <div className="lg:col-span-7 space-y-6 text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/80 border border-amber-300 text-amber-950 text-xs font-extrabold shadow-2xs">
+                <Sparkles className="w-4 h-4 text-amber-700" />
+                <span>Simple, Welcoming & Private • For Every Generation</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.1]">
+                Preserve your family history & oral stories, <span className="text-amber-600 underline decoration-amber-300 decoration-wavy decoration-2">together</span>.
+              </h1>
+
+              <p className="text-base sm:text-lg text-slate-700 font-medium leading-relaxed max-w-2xl">
+                Lores is an accessible family tree and storytelling archive engineered so every family member can record authentic voices, organize relationships without confusing charts, and safeguard ancestral memories.
+              </p>
+
+              {/* Value Highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <Compass className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-900">1-Hop Focus Navigation</h2>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      Explore one person at a time with clear, legible cards.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <BookOpen className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-900">Oral Lore & Stories</h2>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      Attach voices, anecdotes, and recipes directly to relatives.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <Lock className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-900">Living Privacy Protection</h2>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      Living relatives are automatically redacted for guest viewers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <History className="w-4 h-4 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-extrabold text-slate-900">30-Day Recovery Safety Net</h2>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      1-click restore for any deleted family member or story.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Hero Column: Auth Form */}
+            <div className="lg:col-span-5 flex justify-center">
+              <LoginForm onOtpRequested={handleOtpRequested} />
+            </div>
+          </div>
+
+          {/* Visual Showcase Graphic */}
+          <div className="bg-linear-to-b from-white to-slate-100/80 rounded-3xl p-6 sm:p-10 border-2 border-slate-200 shadow-md space-y-6">
+            <div className="text-center max-w-2xl mx-auto">
+              <span className="text-xs font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200 inline-block mb-2">
+                Intuitive Architecture
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Designed for clarity, comfort, and connection
+              </h2>
+              <p className="text-sm text-slate-600 mt-2 font-medium">
+                Unlike traditional genealogy tools with overwhelming charts and tiny text, Lores displays families in a clean, human-centered neighborhood hub.
+              </p>
+            </div>
+
+            {/* Graphic Illustration Diagram */}
+            <div className="max-w-3xl mx-auto bg-slate-50/90 rounded-2xl p-6 border-2 border-slate-200/90 shadow-inner">
+              <div className="flex flex-col items-center gap-4">
+                {/* Parents preview */}
+                <div className="flex gap-4 items-center">
+                  <div className="bg-white border-2 border-blue-200 rounded-xl px-4 py-2 text-center shadow-xs">
+                    <span className="text-2xs font-extrabold uppercase text-blue-700">Father</span>
+                    <p className="text-xs font-bold text-slate-900">Arthur Miller</p>
+                    <p className="text-2xs text-slate-500">1915 — 2005</p>
+                  </div>
+                  <div className="w-6 h-0.5 bg-blue-300" />
+                  <div className="bg-white border-2 border-blue-200 rounded-xl px-4 py-2 text-center shadow-xs">
+                    <span className="text-2xs font-extrabold uppercase text-blue-700">Mother</span>
+                    <p className="text-xs font-bold text-slate-900">Eleanor Vance</p>
+                    <p className="text-2xs text-slate-500">1918 — 2012</p>
+                  </div>
+                </div>
+
+                {/* Middle focus row */}
+                <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+                  <div className="bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-center shadow-xs">
+                    <span className="text-2xs font-bold uppercase text-slate-500">Sibling</span>
+                    <p className="text-xs font-bold text-slate-800">Robert Miller</p>
+                    <p className="text-2xs text-slate-500">b. 1945</p>
+                  </div>
+
+                  <div className="h-0.5 w-6 bg-slate-300 hidden sm:block" />
+
+                  {/* Focus Card */}
+                  <div className="bg-amber-50 border-2 border-amber-500 ring-4 ring-amber-200 rounded-2xl p-4 text-center shadow-md min-w-[200px]">
+                    <span className="text-2xs font-black uppercase tracking-wider text-amber-800 bg-amber-200 px-2 py-0.5 rounded-full">
+                      Focus Person
+                    </span>
+                    <p className="text-base font-extrabold text-slate-950 mt-1">Margaret Miller</p>
+                    <p className="text-xs text-amber-900 font-semibold">b. 1942 • Boston, MA</p>
+                    <div className="mt-2 text-2xs bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center justify-center gap-1 font-medium">
+                      <BookOpen className="w-3 h-3 text-amber-600" />
+                      <span>3 Stories Attached</span>
+                    </div>
+                  </div>
+
+                  <div className="h-0.5 w-6 bg-rose-300 hidden sm:block" />
+
+                  <div className="bg-white border-2 border-rose-200 rounded-xl px-3.5 py-2 text-center shadow-xs">
+                    <div className="flex items-center justify-center gap-1">
+                      <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
+                      <span className="text-2xs font-extrabold uppercase text-rose-700">Spouse</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-800">George Vance</p>
+                    <p className="text-2xs text-slate-500">1940 — 2018</p>
+                  </div>
+                </div>
+
+                {/* Children preview */}
+                <div className="flex gap-4 items-center">
+                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2 text-center shadow-xs">
+                    <span className="text-2xs font-extrabold uppercase text-emerald-700">Child</span>
+                    <p className="text-xs font-bold text-slate-900">Ronald Vance</p>
+                    <p className="text-2xs text-slate-500">b. 1968</p>
+                  </div>
+                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2 text-center shadow-xs">
+                    <span className="text-2xs font-extrabold uppercase text-emerald-700">Child</span>
+                    <p className="text-xs font-bold text-slate-900">Clara Vance</p>
+                    <p className="text-2xs text-slate-500">b. 1972</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Three Feature Highlight Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-3xl p-6 border-2 border-slate-200 shadow-sm space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center border border-amber-300">
+                <Compass className="w-6 h-6 stroke-[2.4]" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900">1-Hop Focus Neighborhood</h3>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                Step through your family story without getting lost in overwhelming multi-branch canvas diagrams. Every person is the center of their own circle.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 border-2 border-slate-200 shadow-sm space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center border border-emerald-300">
+                <BookOpen className="w-6 h-6 stroke-[2.4]" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900">Oral History & Lore Notes</h3>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                Record family memories, audio lore, milestone events, and cultural heritage so the human spirit of your lineage lives on for future generations.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 border-2 border-slate-200 shadow-sm space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center border border-blue-300">
+                <Network className="w-6 h-6 stroke-[2.4]" />
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900">Bird's-Eye SVG Map</h3>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                Zoom out to see your complete multi-generational pedigree chart anytime with smooth SVG pan and zoom, partner indicators, and exportable views.
+              </p>
+            </div>
+          </div>
+        </main>
+
+        {/* Public Footer */}
+        <footer className="w-full border-t-2 border-slate-200 bg-white py-8 mt-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-500">
+            <div className="flex items-center gap-2">
+              <TreePine className="w-4 h-4 text-amber-600" />
+              <span>Lores — Accessible, Multi-Tenant Family Tree & Oral Lore Archive</span>
+            </div>
+            <div>
+              <span>Open Source & Community Centered</span>
+            </div>
+          </div>
+        </footer>
 
         <VerifyOtpModal
           isOpen={isVerifyOpen}
           onBack={() => setIsVerifyOpen(false)}
           email={authEmail || ''}
-          devOtp={devOtp}
           onSuccess={handleAuthSuccess}
         />
       </div>
@@ -544,69 +781,73 @@ export const App: React.FC = () => {
 
         {/* Empty Tree State (Prompt to add first person) */}
         {currentWorkspace && !focusNeighborhood && !treeLoading && (
-          <div className="max-w-lg mx-auto mt-12 bg-white rounded-3xl p-8 border-2 border-slate-200 shadow-lg text-center space-y-6">
-            <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto text-amber-700">
-              <UserPlus className="w-8 h-8 stroke-[2.5]" />
+          <div className="max-w-xl mx-auto mt-10 bg-white rounded-3xl p-8 sm:p-10 border-2 border-slate-200/90 shadow-xl text-center space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-amber-400 via-amber-500 to-amber-600" />
+
+            <div className="w-16 h-16 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center justify-center mx-auto text-amber-700 shadow-xs">
+              <TreePine className="w-8 h-8 stroke-[2.2]" />
             </div>
 
-            <div>
-              <h2 className="text-2xl font-black text-slate-900">Start Your Family Tree</h2>
-              <p className="text-slate-600 text-sm mt-1 font-medium">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Begin Your Family Tree</h2>
+              <p className="text-slate-600 text-sm font-medium max-w-md mx-auto">
                 {isViewer
                   ? 'This family tree is currently empty. A family admin or collaborator can add the initial relatives.'
-                  : 'Add yourself or the oldest known relative to begin building your family history.'}
+                  : 'Add yourself or an elder relative to start recording your family lineage and lore.'}
               </p>
             </div>
 
             {!isViewer && (
-              <form onSubmit={handleCreateRootPerson} className="space-y-4 text-left">
-                <div>
-                  <label htmlFor="root_first_name" className="block text-sm font-bold text-slate-800 mb-1">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="root_first_name"
-                    name="first_name"
-                    type="text"
-                    required
-                    placeholder="e.g. Margaret"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
-                  />
+              <form onSubmit={handleCreateRootPerson} className="space-y-4 text-left pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="root_first_name" className="block text-sm font-bold text-slate-900 mb-1">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="root_first_name"
+                      name="first_name"
+                      type="text"
+                      required
+                      placeholder="e.g. Margaret"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base font-semibold transition-all outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-900 mb-1">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="root_last_name"
+                      name="last_name"
+                      type="text"
+                      required
+                      placeholder="e.g. Miller"
+                      className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base font-semibold transition-all outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-800 mb-1">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="root_last_name"
-                    name="last_name"
-                    type="text"
-                    required
-                    placeholder="e.g. Miller"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="root_birth_date" className="block text-sm font-bold text-slate-800 mb-1">
-                    Birth Date <span className="text-xs text-slate-400 font-normal">(Optional)</span>
+                  <label htmlFor="root_birth_date" className="block text-sm font-bold text-slate-900 mb-1">
+                    Birth Date / Year <span className="text-xs text-slate-500 font-normal">(Optional)</span>
                   </label>
                   <input
                     id="root_birth_date"
                     name="birth_date"
                     type="text"
-                    placeholder="e.g. 1942-05-12 or 1942"
-                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
+                    placeholder="e.g. 1942 or 12 Apr 1942"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-100 text-base font-semibold transition-all outline-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full mt-4 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-base transition-colors shadow flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full mt-4 py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-black text-base transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Plus className="w-5 h-5 stroke-[2.5]" />
-                  <span>Add Root Person</span>
+                  <span>Add First Relative & Start Tree</span>
                 </button>
               </form>
             )}

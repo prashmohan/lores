@@ -11,6 +11,7 @@ from app.models.person import Person
 from app.models.union import FamilyUnion
 from app.models.user import User
 from app.services.audit_service import record_audit_event
+from app.services.cycle_service import validate_no_cycle
 
 
 def create_lore(
@@ -77,7 +78,7 @@ def get_lore_for_person(
         LoreNote.person_id == person_id,
     )
     if not include_deleted:
-        stmt = stmt.where(LoreNote.is_deleted == False)
+        stmt = stmt.where(LoreNote.is_deleted.is_(False))
     stmt = stmt.order_by(LoreNote.event_year.desc().nullslast(), LoreNote.created_at.desc())
     return list(db.scalars(stmt).all())
 
@@ -165,7 +166,7 @@ def soft_delete_person(
     ch_stmt = select(ChildRelationship).where(
         ChildRelationship.workspace_id == workspace_id,
         ChildRelationship.child_id == person_id,
-        ChildRelationship.is_deleted == False,
+        ChildRelationship.is_deleted.is_(False),
     )
     for rel in db.scalars(ch_stmt).all():
         rel.is_deleted = True
@@ -175,7 +176,7 @@ def soft_delete_person(
     union_stmt = select(FamilyUnion).where(
         FamilyUnion.workspace_id == workspace_id,
         (FamilyUnion.partner1_id == person_id) | (FamilyUnion.partner2_id == person_id),
-        FamilyUnion.is_deleted == False,
+        FamilyUnion.is_deleted.is_(False),
     )
     for union in db.scalars(union_stmt).all():
         union.is_deleted = True
@@ -185,7 +186,7 @@ def soft_delete_person(
         union_ch_stmt = select(ChildRelationship).where(
             ChildRelationship.workspace_id == workspace_id,
             ChildRelationship.union_id == union.id,
-            ChildRelationship.is_deleted == False,
+            ChildRelationship.is_deleted.is_(False),
         )
         for u_rel in db.scalars(union_ch_stmt).all():
             u_rel.is_deleted = True
@@ -218,7 +219,7 @@ def get_trash_items(
     # Deleted People
     person_stmt = select(Person).where(
         Person.workspace_id == workspace_id,
-        Person.is_deleted == True,
+        Person.is_deleted.is_(True),
     )
     for p in db.scalars(person_stmt).all():
         p_deleted_at = p.deleted_at
@@ -242,7 +243,7 @@ def get_trash_items(
     # Deleted LoreNotes
     lore_stmt = select(LoreNote).where(
         LoreNote.workspace_id == workspace_id,
-        LoreNote.is_deleted == True,
+        LoreNote.is_deleted.is_(True),
     )
     for lore in db.scalars(lore_stmt).all():
         l_deleted_at = lore.deleted_at
@@ -309,6 +310,18 @@ def restore_from_trash(
                 u_rel.is_deleted = False
                 u_rel.deleted_at = None
 
+        # Validate graph invariants for all reactivated relationships
+        for rel in db.scalars(ch_stmt).all():
+            validate_no_cycle(db, workspace_id, rel.union_id, entity_id)
+
+        for union in db.scalars(union_stmt).all():
+            union_ch_stmt = select(ChildRelationship).where(
+                ChildRelationship.workspace_id == workspace_id,
+                ChildRelationship.union_id == union.id,
+            )
+            for u_rel in db.scalars(union_ch_stmt).all():
+                validate_no_cycle(db, workspace_id, u_rel.union_id, u_rel.child_id)
+
         record_audit_event(
             db,
             workspace_id,
@@ -356,7 +369,7 @@ def purge_trash(
         db.scalars(
             select(LoreNote).where(
                 LoreNote.workspace_id == workspace_id,
-                LoreNote.is_deleted == True,
+                LoreNote.is_deleted.is_(True),
             )
         ).all()
     )
@@ -367,7 +380,7 @@ def purge_trash(
         db.scalars(
             select(ChildRelationship).where(
                 ChildRelationship.workspace_id == workspace_id,
-                ChildRelationship.is_deleted == True,
+                ChildRelationship.is_deleted.is_(True),
             )
         ).all()
     )
@@ -378,7 +391,7 @@ def purge_trash(
         db.scalars(
             select(FamilyUnion).where(
                 FamilyUnion.workspace_id == workspace_id,
-                FamilyUnion.is_deleted == True,
+                FamilyUnion.is_deleted.is_(True),
             )
         ).all()
     )
@@ -389,7 +402,7 @@ def purge_trash(
         db.scalars(
             select(Person).where(
                 Person.workspace_id == workspace_id,
-                Person.is_deleted == True,
+                Person.is_deleted.is_(True),
             )
         ).all()
     )

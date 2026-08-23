@@ -21,12 +21,22 @@ def list_people(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     q: str | None = Query(None),
-    _role: str = Depends(get_workspace_role),
+    role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
-    return person_service.list_people(
+    people = person_service.list_people(
         db, workspace_id=workspace_id, skip=skip, limit=limit, query=q
     )
+    if role == "viewer":
+        return [
+            PersonRead.model_validate(p).model_copy(
+                update={"birth_date": None, "birth_place": None}
+            )
+            if p.is_living
+            else PersonRead.model_validate(p)
+            for p in people
+        ]
+    return people
 
 
 @router.post("", response_model=PersonRead)
@@ -50,12 +60,16 @@ def create_person(
 def get_person(
     workspace_id: uuid.UUID,
     person_id: uuid.UUID,
-    _role: str = Depends(get_workspace_role),
+    role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
     person = person_service.get_person_by_id(db, workspace_id=workspace_id, person_id=person_id)
     if not person:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+    if role == "viewer" and person.is_living:
+        return PersonRead.model_validate(person).model_copy(
+            update={"birth_date": None, "birth_place": None}
+        )
     return person
 
 

@@ -1,9 +1,11 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.workspace import Workspace, WorkspaceMember, slugify
+
+VALID_WORKSPACE_ROLES = {"viewer", "collaborator", "admin"}
 
 ROLE_HIERARCHY: dict[str, int] = {
     "viewer": 1,
@@ -24,7 +26,7 @@ def create_workspace(
 
     clean_name = name.strip()
     base_slug = slugify(clean_name) or "workspace"
-    slug = f"{base_slug}-{uuid.uuid4().hex[:6]}"
+    slug = f"{base_slug}-{uuid.uuid4().hex[:10]}"
 
     workspace = Workspace(
         name=clean_name,
@@ -64,8 +66,10 @@ def add_or_update_member(
     role: str,
     actor_id: uuid.UUID | None = None,
 ) -> WorkspaceMember:
-    if role not in ROLE_HIERARCHY:
-        raise ValueError(f"Invalid role: {role}")
+    if role not in VALID_WORKSPACE_ROLES:
+        raise ValueError(
+            f"Invalid workspace role: {role}. Must be one of {sorted(VALID_WORKSPACE_ROLES)}"
+        )
 
     stmt = select(WorkspaceMember).where(
         WorkspaceMember.workspace_id == workspace_id,
@@ -73,6 +77,18 @@ def add_or_update_member(
     )
     member = db.scalar(stmt)
     if member:
+        if member.role == "admin" and role != "admin":
+            admin_count = (
+                db.scalar(
+                    select(func.count(WorkspaceMember.id)).where(
+                        WorkspaceMember.workspace_id == workspace_id,
+                        WorkspaceMember.role == "admin",
+                    )
+                )
+                or 0
+            )
+            if admin_count <= 1:
+                raise ValueError("Cannot demote the sole administrator of the workspace")
         member.role = role
     else:
         member = WorkspaceMember(
@@ -96,11 +112,25 @@ def remove_member(
         WorkspaceMember.user_id == user_id,
     )
     member = db.scalar(stmt)
-    if member:
-        db.delete(member)
-        db.flush()
-        return True
-    return False
+    if not member:
+        return False
+
+    if member.role == "admin":
+        admin_count = (
+            db.scalar(
+                select(func.count(WorkspaceMember.id)).where(
+                    WorkspaceMember.workspace_id == workspace_id,
+                    WorkspaceMember.role == "admin",
+                )
+            )
+            or 0
+        )
+        if admin_count <= 1:
+            raise ValueError("Cannot remove the sole administrator of the workspace")
+
+    db.delete(member)
+    db.flush()
+    return True
 
 
 def get_workspace_by_id(

@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -96,6 +96,7 @@ def list_members(
 def add_member(
     workspace_id: uuid.UUID,
     req: WorkspaceMemberCreate,
+    background_tasks: BackgroundTasks,
     _role: str = Depends(require_role("admin")),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -124,11 +125,12 @@ def add_member(
     db.commit()
     db.refresh(member)
 
-    # Fetch workspace metadata and send invitation email
+    # Fetch workspace metadata and dispatch invitation email asynchronously in background
     ws = workspace_service.get_workspace_by_id(db, workspace_id)
     ws_name = ws.name if ws else "Family Tree"
     inviter_name = current_user.display_name or current_user.email
-    email_service.send_invitation_email(
+    background_tasks.add_task(
+        email_service.send_invitation_email,
         to_email=target_user.email,
         inviter_name=inviter_name,
         workspace_name=ws_name,
@@ -154,7 +156,11 @@ def remove_member(
     _role: str = Depends(require_role("admin")),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    success = workspace_service.remove_member(db, workspace_id, user_id)
+    try:
+        success = workspace_service.remove_member(db, workspace_id, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
     db.commit()

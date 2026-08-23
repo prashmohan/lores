@@ -92,13 +92,33 @@ def verify_otp(db: Session, email: str, code: str) -> tuple[User, str]:
     )
 
     tokens = list(db.scalars(stmt).all())
+    if not tokens:
+        raise ValueError("Invalid or expired authentication code")
+
     valid_token: MagicAuthToken | None = None
 
     for t in tokens:
         token_exp = t.expires_at if t.expires_at.tzinfo else t.expires_at.replace(tzinfo=UTC)
-        if token_exp > now and pwd_context.verify(code, t.code_hash):
+        if token_exp <= now:
+            t.used_at = now
+            continue
+
+        if t.failed_attempts >= 5:
+            t.used_at = now
+            continue
+
+        if pwd_context.verify(code, t.code_hash):
             valid_token = t
             break
+        else:
+            t.failed_attempts += 1
+            if t.failed_attempts >= 5:
+                t.used_at = now
+                db.flush()
+                raise ValueError(
+                    "Too many failed attempts. This code is now invalidated. Please request a new code."
+                )
+            db.flush()
 
     if not valid_token:
         raise ValueError("Invalid or expired authentication code")

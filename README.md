@@ -1,20 +1,37 @@
 # Lores — Accessible Family Tree & Oral History Builder
 
-> **Lores** is an accessible, multi-tenant family tree and oral history web platform engineered specifically for families to record, preserve, and explore their lineage and stories. It is designed from the ground up for older, less technically conversant relatives ("Storykeepers") and their families.
+<div align="center">
+
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![A11y](https://img.shields.io/badge/WCAG_2.1-AAA_Target-green?style=flat-square&logo=w3c&logoColor=white)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+
+**Lores** is an accessible, multi-tenant family tree and oral storytelling web platform engineered for families to record, preserve, and explore their lineage, memories, and spoken histories together.
+
+[Key Features](#1-key-features) • [Architecture](#2-architecture--technology-stack) • [Quickstart](#3-quickstart--local-development) • [Docker Deployment](#4-running-with-docker) • [Quality & Verification](#5-automated-verification--quality-gates)
+
+</div>
 
 ---
 
-## 1. Project Overview & Vision
+## 1. Key Features
 
-Traditional genealogy software often overwhelms users with dense charts, microscopic fonts, complex navigational controls, and archaic terminology (*Ahnentafel*, *Consanguinity*, *Pedigree Collapse*). 
+Traditional genealogy software often overwhelms families with sprawling, tangled charts, microscopic fonts, complex navigational controls, and archaic terminology (*Ahnentafel*, *Consanguinity*, *Pedigree Collapse*).
 
-**Lores** replaces cognitive overload with **simplicity, psychological safety, and radical accessibility**:
-- **1-Hop Neighborhood Focus**: Rather than displaying infinite tangled tree canvases, Lores centers the user on a single **Focus Person** with their immediate parents, partners, siblings, and children displayed in large, readable relationship cards.
-- **Guided Oral History Interview**: A step-by-step conversational assistant prompts Storykeepers with simple, plain-language questions to collect relatives and family stories effortlessly.
-- **Bird's-Eye SVG Map**: An interactive multi-generation pedigree map with smooth zoom and pan controls for family-wide overviews.
-- **Living Relative Privacy**: Living relatives are automatically protected and redacted for unauthorized viewers.
-- **Psychological Safety**: Every change is backed by an immutable append-only audit trail and a **30-day Family Trash Can** allowing 1-click restore.
-- **Automated Accessibility Testing**: Multi-tiered automated checks (ESLint `jsx-a11y`, `vitest-axe`, `@axe-core/playwright`, `@axe-core/react`, and Lighthouse CI) guarantee WCAG 2.1 AA/AAA compliance.
+**Lores replaces cognitive overload with simplicity, psychological safety, and radical accessibility:**
+
+- 🌿 **1-Hop Focus Neighborhood**: Rather than displaying infinite tangled tree canvases, Lores centers the user on a single **Focus Person** with their immediate parents, partners, siblings, and children displayed in legible, high-contrast cards.
+- 🎙️ **Oral Lore & Storytelling**: Attach voice recordings, milestone stories, recipes, and personal anecdotes directly to family members so irreplaceable heritage is preserved for generations.
+- 🗺️ **Bird's-Eye SVG Map**: An interactive multi-generation pedigree map with smooth zoom, pan, and partner indicators for family-wide overviews.
+- 🔒 **Living Relative Privacy**: Living relatives have sensitive details automatically redacted for guest and unauthorized viewers.
+- ↩️ **30-Day Family Safety Net**: Every change is recorded in an immutable append-only audit trail. Deleted relatives and stories are held in a **30-day Family Trash Can** with 1-click restore.
+- 🛡️ **Multi-Tenant Workspaces & RBAC**: Isolated family workspaces with 4 distinct roles: `owner`, `admin`, `collaborator`, and `viewer`.
+- 🔑 **Passwordless OTP Authentication**: Frictionless, secure 6-digit email passcodes without passwords to remember.
+- ♿ **Strict Accessibility (WCAG 2.1 AA/AAA)**: Integrated High-Contrast Mode, large touch targets ($\ge 44 \times 44\text{px}$), and automated axe-core testing across the entire interface.
 
 ---
 
@@ -24,210 +41,178 @@ Lores is structured as a full-stack monorepo:
 
 ```
 lores/
-├── backend/                  # FastAPI 0.115+, SQLAlchemy 2.0 (async), Pydantic v2, SQLite
+├── backend/                  # FastAPI (Python 3.12+), SQLAlchemy 2.0 (async), Pydantic v2, SQLite
 │   ├── app/
 │   │   ├── api/              # RESTful API router (v1 endpoints for auth, tree, workspaces, lore, trash)
 │   │   ├── db/               # Async engine, sessionmaker, base declarative model
-│   │   ├── models/           # SQLAlchemy models (User, Workspace, Person, FamilyUnion, LoreNote, etc.)
+│   │   ├── models/           # SQLAlchemy models (User, Workspace, Person, FamilyUnion, LoreNote, AuditLog)
 │   │   ├── schemas/          # Pydantic v2 validation & response schemas
-│   │   └── services/         # Core business logic (cycle detection, neighborhood graph, audit, auth)
-│   └── tests/                # Pytest async test suite (100% pass, 95%+ coverage)
+│   │   └── services/         # Business logic (cycle detection, neighborhood graph, audit ledger, auth)
+│   └── tests/                # Pytest async test suite (87 tests, 100% passing)
 ├── frontend/                 # React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons
 │   ├── e2e/                  # Playwright E2E browser accessibility test suite
 │   ├── src/
-│   │   ├── components/       # UI Components (auth, layout, tree, interview, map, history)
+│   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin)
 │   │   ├── lib/              # Type-safe API client and token storage
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests
+│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (71 tests)
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
-└── .github/workflows/        # GitHub Actions CI/CD pipeline (backend + frontend a11y)
+└── docker-compose.yml        # Multi-stage production and development container orchestrations
 ```
 
-### Key Technologies
+### Data Flow & Neighborhood Traversal
 
-- **Backend**:
-  - **Python 3.12+** & **FastAPI** for high-performance async API endpoints.
-  - **SQLAlchemy 2.0** with **`aiosqlite`** for lightweight, zero-configuration embedded async persistence.
-  - **Pydantic v2** for strict input validation, serialization, and OpenAPI generation.
-  - **PyJWT & Passlib** for passwordless 6-digit OTP verification and JWT session management.
-  - **Ruff & Mypy** for formatting, linting, and strict static type compliance.
-- **Frontend**:
-  - **React 18** + **TypeScript (strict mode)** for deterministic, component-driven UI.
-  - **Vite** for sub-second hot reloading and optimized production bundling.
-  - **Tailwind CSS** with custom accessible tokens and High-Contrast Mode toggle.
-  - **Radix UI Primitives** for accessible dialogs, overlays, and focus traps.
-  - **Lucide Icons** for clean, senior-friendly iconography.
-  - **Accessibility Suite**: `eslint-plugin-jsx-a11y`, `vitest-axe` (DOM audits), `@axe-core/playwright` (browser E2E scans), `@axe-core/react` (dev console logging), and `@lhci/cli` (Lighthouse CI $\ge 95\%$).
+```mermaid
+flowchart TD
+    subgraph Client["Frontend (React 18 + Tailwind + Radix)"]
+        UI["Focus View / Bird's-Eye Map"]
+        Auth["Passwordless OTP Flow"]
+    end
 
----
+    subgraph API["FastAPI Backend (Python 3.12+)"]
+        Router["API Router (/api/v1/*)"]
+        AuthService["Auth & Session Service"]
+        TreeEngine["1-Hop Neighborhood Query Engine"]
+        CycleEngine["DFS DAG Cycle Detection Engine"]
+        AuditService["Append-Only Audit Ledger"]
+    end
 
-## 3. Core Architectural Highlights & Data Model
+    subgraph Storage["Persistence Layer"]
+        DB[("SQLite (aiosqlite) / PostgreSQL")]
+        Trash[("30-Day Soft-Delete Recovery Bin")]
+    end
 
-### 3.1 Multi-Tenant Workspaces & Role-Based Access Control (RBAC)
-Each family operates inside an isolated **Workspace** (`workspace_id` explicitly scoped across all database queries). Lores enforces a 4-tier permission hierarchy:
-- **`owner`**: Full administrative access, member role assignment, workspace settings, and permanent trash purge.
-- **`admin`**: Tree mutations, member invitations, and 30-day trash recovery.
-- **`collaborator`**: Add/edit relatives, attach lore stories, upload photos, and soft-delete items.
-- **`viewer`**: Read-only exploration. Deceased relatives are visible, while living individuals have sensitive details automatically redacted for privacy.
-
-### 3.2 Union-Centric Family Graph & DAG Cycle Prevention
-Family trees are modeled using GEDCOM 7.0-aligned Union nodes (`FamilyUnion` and `ChildRelationship`) rather than direct parent-child pointers:
-- Supports multi-parent, adoptive, and remarriage family structures naturally.
-- **DAG Cycle Detection Engine** (`cycle_service.py`): Performs depth-first graph traversal on every union mutation to prevent circular ancestry (e.g. adding Margaret as her own ancestor) before persisting.
-
-### 3.3 1-Hop Neighborhood Query Engine
-The `tree_service.py` compiles an indexed 1-hop radius around any given focus person in sub-millisecond execution time:
-- **Parents**: Biological and adoptive parent unions.
-- **Partners**: Current and former spouses / partners with union metadata.
-- **Siblings**: Full and half-siblings sharing parent unions.
-- **Children**: Direct offspring across all unions.
-- **Living Privacy Redactor**: Anonymizes living relatives for viewers without administrative credentials.
-
-### 3.4 30-Day Family Trash Can & Append-Only Audit Trail
-- **Soft Deletion (`is_deleted=True`)**: Deleting a person or lore note moves it to the **Family Trash Can** with a 30-day countdown before permanent purge.
-- **1-Click Restore**: Any collaborator or admin can instantly recover deleted records with full relationship reconstruction.
-- **Audit Logging (`AuditLog`)**: Immutable, append-only ledger tracking all actions (`CREATE`, `UPDATE`, `DELETE`, `RESTORE`) with structured JSON attribute diffs and actor attribution.
+    UI <-->|"JSON REST API + JWT"| Router
+    Auth <-->|"6-Digit OTP"| AuthService
+    Router --> TreeEngine
+    Router --> CycleEngine
+    Router --> AuditService
+    TreeEngine <--> DB
+    CycleEngine <--> DB
+    AuditService --> DB
+    AuditService --> Trash
+```
 
 ---
 
-## 4. Senior-First UX Principles
-
-1. **Low Cognitive Load**: No overwhelming dense pedigree charts by default. Users focus on one person and navigate outward step-by-step.
-2. **Generous Touch & Click Targets**: Buttons and cards adhere to minimum $\ge 44 \times 44\text{px}$ touch targets.
-3. **High-Contrast Support**: Built-in High Contrast toggle enforcing bold borders, pitch-black typography, and high-visibility focus rings (targeting WCAG 2.1 AAA).
-4. **Jargon-Free Interfaces**: Replaces technical genealogical terms with clear phrases like *"Parents"*, *"Partners"*, *"Children"*, and *"Family Stories"*.
-5. **Interactive Breadcrumb Navigation**: Visual history trail allowing Storykeepers to retrace their path through the family tree at any time.
-
----
-
-## 5. Local Development & Setup
+## 3. Quickstart & Local Development
 
 ### Prerequisites
 - **Python 3.12+**
 - **Node.js 20+** & **npm**
 
-### 5.1 Backend Setup
+### 3.1 Backend Setup
 
 ```bash
 # 1. Navigate to backend directory
 cd backend
 
-# 2. Create and activate virtual environment (if not already created)
+# 2. Create and activate a Python virtual environment
 python3 -m venv ../.venv
 source ../.venv/bin/activate
 
-# 3. Install backend dependencies
+# 3. Install dependencies in editable mode
 pip install -e ".[dev]"
 
-# 4. Run the FastAPI development server
+# 4. Start the FastAPI development server
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API will start at `http://localhost:8000`. Interactive OpenAPI documentation is accessible at `http://localhost:8000/docs`.
+- API endpoint: `http://localhost:8000`
+- Interactive OpenAPI documentation: `http://localhost:8000/docs`
 
-### 5.2 Frontend Setup
+### 3.2 Frontend Setup
 
 ```bash
-# 1. Navigate to frontend directory
+# 1. Navigate to frontend directory (in a new terminal)
 cd frontend
 
 # 2. Install dependencies
 npm install
 
-# 3. Install Playwright browser dependencies (for a11y E2E tests)
+# 3. Install Playwright browser binaries (for accessibility E2E tests)
 npx playwright install chromium
 
-# 4. Run Vite dev server
+# 4. Start the Vite development server
 npm run dev
 ```
 
-The frontend will start at `http://localhost:5173`. Requests to `/api/*` are automatically proxied to the backend at `http://localhost:8000`.
+- Web App: `http://localhost:5173` (requests to `/api/*` proxy automatically to backend on port 8000)
 
-### 5.3 Passwordless Login Workflow
+### 3.3 Passwordless Login Flow
 
-1. Open `http://localhost:5173` (or `http://localhost` in Docker) in your browser.
-2. Enter an email address (e.g., `storykeeper@family.org`).
-3. In local development mode, the OTP passcode is logged to the backend console and returned in the mock response for instant access.
-4. Enter the 6-digit passcode to verify and enter the workspace.
+1. Open `http://localhost:5173` in your browser.
+2. Enter your email (e.g. `storykeeper@family.org`).
+3. In local development mode, the OTP code is printed to the backend terminal and returned in the mock response for instant access.
+4. Enter the 6-digit passcode to enter your family workspace.
 
-### 5.4 Running with Docker & Docker Compose
+---
 
-#### A. Development Mode with Docker Compose Watch (Live Hot-Reloading)
+## 4. Running with Docker
 
-Lores includes a dedicated `docker-compose.dev.yml` file configured with `docker compose watch` (`develop.watch`). This enables:
-- **Instant Frontend Hot Module Replacement (HMR)**: Any edits in `frontend/src/` or `frontend/public/` sync immediately into the running container without rebuilding.
-- **Backend Auto-Reloading**: Python changes in `backend/app/` sync automatically, and Uvicorn reloads instantly.
-- **Automatic Rebuilds**: Dependency file modifications (`package.json`, `requirements.txt`) trigger automatic container rebuilds.
+### A. Development Mode (Live Hot-Reloading with Docker Compose Watch)
+
+Lores supports `docker compose watch` (`develop.watch`) for instant frontend HMR and backend auto-reloads without rebuilding containers:
 
 ```bash
-# Launch development containers with live file sync and watch
 docker compose -f docker-compose.dev.yml up --watch
 ```
 
-#### B. Production Multi-Stage Container Build
-
-For a production-ready containerized environment:
+### B. Production Multi-Stage Container Build
 
 ```bash
-# 1. Copy the environment configuration template
+# 1. Copy the configuration template
 cp .env.example .env
 
-# 2. Optionally adjust APP_PORT in .env (e.g. APP_PORT=8156)
-
-# 3. Build and launch all services
-docker compose up --build
+# 2. Build and launch all services
+docker compose up --build -d
 ```
 
-- **Web Application & UI**: Accessible at `http://localhost:${APP_PORT:-8156}` (e.g. [`http://localhost:8156`](http://localhost:8156)).
-- **Zero Host Port Conflicts**: All traffic is routed through the single exposed `APP_PORT`; backend port 8000 remains internal to Docker.
-- **Persistent Data Storage**: SQLite database records are safely persisted in the named Docker volume `lores_data` (or `lores_dev_data` in dev mode).
+- **Application URL**: Accessible at `http://localhost:8156` (or the configured `APP_PORT`).
+- **Data Persistence**: SQLite database records are persisted in the named Docker volume `lores_data`.
 
-To stop the containers:
+To stop containers:
 ```bash
-docker compose -f docker-compose.dev.yml down  # for dev
-docker compose down                            # for prod
+docker compose down
 ```
 
 ---
 
-## 6. Automated Verification & Quality Gates
+## 5. Automated Verification & Quality Gates
 
-Lores enforces strict quality gates across both frontend and backend before any code is committed or merged.
+Lores enforces rigorous automated quality gates before any code is committed.
 
-### Run Full Quality Gate Suite
-
-Execute the unified verification script from the repository root:
+### Run Unified Verification Pipeline
 
 ```bash
 ./scripts/verify_all.sh
 ```
 
-The script runs the complete 7-step test and analysis pipeline:
-1. **Backend Pytest Suite**: 66 async unit and integration tests with coverage (`pytest -v --cov=app`).
-2. **Ruff Linter & Formatter**: Strict PEP 8 and Python linting checks (`ruff check .` & `ruff format --check .`).
-3. **Mypy Static Type Analysis**: Strict type checking on all backend modules (`mypy app`).
-4. **Frontend Static A11y & Lint**: ESLint + `eslint-plugin-jsx-a11y` (`npm run lint`).
-5. **TypeScript Compilation & Production Bundle**: Strict typecheck (`tsc -b`) and Vite production build (`npm run build`).
-6. **Frontend Component & A11y Tests**: 57 Vitest component tests with `vitest-axe` DOM audits (`npm test`).
-7. **Playwright E2E Accessibility Audits**: 5 Playwright browser tests verifying WCAG 2.1 AA/AAA rules (`npm run test:e2e:a11y`).
+This executes all 7 verification steps:
 
-### Individual Commands
-
-| Scope | Purpose | Command |
-| :--- | :--- | :--- |
-| **Backend** | Unit & E2E Tests with Coverage | `cd backend && pytest -v --cov=app` |
-| **Backend** | Ruff Linting Check | `cd backend && ruff check .` |
-| **Backend** | Ruff Code Formatting Check | `cd backend && ruff format --check .` |
-| **Backend** | Static Type Checking | `cd backend && mypy app` |
-| **Frontend** | Static A11y & Code Linting | `cd frontend && npm run lint` |
-| **Frontend** | Typecheck & Production Build | `cd frontend && npm run build` |
-| **Frontend** | Component & A11y Tests | `cd frontend && npm test` |
-| **Frontend** | Browser E2E A11y Audits | `cd frontend && npm run test:e2e:a11y` |
-| **Frontend** | Lighthouse CI Audit | `cd frontend && npm run lhci` |
+| Step | Scope | Tool | Checks / Standard |
+| :--- | :--- | :--- | :--- |
+| **1** | Backend | `pytest` | **87** async unit & integration tests (100% pass) |
+| **2** | Backend | `ruff` | PEP 8 linting & formatting compliance (`ruff check .` & `ruff format --check .`) |
+| **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
+| **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
+| **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
+| **6** | Frontend | `vitest` + `axe` | **71** component unit & `vitest-axe` DOM accessibility audits |
+| **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
 
 ---
 
-## 7. License & Contributions
+## 6. Human-Centered & Accessible UX Principles
 
-Lores is developed as an open-source, community-centered family archive. Contributions following the standards in `AGENTS.md` are warmly welcomed.
+1. **Low Cognitive Load**: Focus on one family member at a time. Clear, step-by-step navigation replaces confusing sprawling charts.
+2. **Generous Touch & Click Targets**: All interactive elements adhere to minimum $\ge 44 \times 44\text{px}$ targets.
+3. **High-Contrast Support**: Built-in High Contrast toggle enforcing bold borders, pitch-black typography, and high-visibility focus indicators (targeting WCAG 2.1 AAA).
+4. **Inclusive, Clear Language**: Replaces technical genealogical jargon with intuitive words like *"Parents"*, *"Partners"*, *"Children"*, and *"Stories"*.
+5. **Psychological Safety**: Destructive actions can be undone with 1-click restore from the 30-day Family Trash Can.
+
+---
+
+## 7. License & Community
+
+Lores is open-source software released under the [MIT License](LICENSE). Contributions and feedback from families, genealogists, and developers are warmly welcomed following the standards in `AGENTS.md`.

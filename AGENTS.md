@@ -6,7 +6,7 @@ This document outlines mandatory coding standards, toolchains, testing protocols
 
 ## 1. Project Overview & Monorepo Architecture
 
-**Lores** is an accessible, multi-tenant family tree and oral history builder designed specifically for older, less technically conversant relatives ("Storykeepers") and their families.
+**Lores** is an accessible, multi-tenant family tree and oral history builder designed specifically for families and storytellers of every generation to record, preserve, and explore their lineage and heritage together.
 
 The repository is structured as a full-stack monorepo:
 - **`backend/`**: FastAPI (Python 3.12+), SQLAlchemy 2.0 (async), Pydantic v2, SQLite (`aiosqlite`), JWT & OTP authentication.
@@ -99,7 +99,7 @@ npm run test:e2e:a11y
 
 ## 5. Domain & UX Principles (Lores-Specific)
 
-### 5.1 Senior-First Accessible UX
+### 5.1 Accessible, Human-Centered UX
 - **Low Cognitive Load**: Avoid dense genealogical charts or complex jargon (e.g., prefer "Parents", "Partners", "Children", "Stories" over technical terms like "Ahnentafel" or "Consanguinity").
 - **Visual Clarity**: Maintain large typography, high contrast (target WCAG 2.1 AAA), generous click/touch targets ($\ge 44 \times 44\text{px}$), and obvious focus indicators.
 - **Psychological Safety**: Provide clear confirmation modals before irreversible actions, clear undo/restore mechanisms, and helpful reassurance.

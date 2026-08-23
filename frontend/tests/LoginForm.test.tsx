@@ -14,10 +14,9 @@ vi.mock('../src/lib/api', () => ({
 describe('LoginForm', () => {
   it('submits email and triggers onOtpRequested', async () => {
     const onOtpRequested = vi.fn();
-    (api.auth.requestOtp as any).mockResolvedValue({
+    vi.mocked(api.auth.requestOtp).mockResolvedValue({
       message: 'OTP sent',
       email: 'test@example.com',
-      dev_otp: '123456',
     });
 
     render(<LoginForm onOtpRequested={onOtpRequested} />);
@@ -36,12 +35,12 @@ describe('LoginForm', () => {
         email: 'test@example.com',
         display_name: 'Tester',
       });
-      expect(onOtpRequested).toHaveBeenCalledWith('test@example.com', '123456');
+      expect(onOtpRequested).toHaveBeenCalledWith('test@example.com');
     });
   });
 
   it('displays error if requestOtp fails', async () => {
-    (api.auth.requestOtp as any).mockRejectedValue(new Error('Rate limit exceeded'));
+    vi.mocked(api.auth.requestOtp).mockRejectedValue(new Error('Rate limit exceeded'));
 
     render(<LoginForm onOtpRequested={vi.fn()} />);
 

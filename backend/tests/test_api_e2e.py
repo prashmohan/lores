@@ -36,6 +36,20 @@ def fixture_client():
     Base.metadata.drop_all(bind=engine)
 
 
+captured_otps: dict[str, str] = {}
+
+
+@pytest.fixture(autouse=True)
+def capture_emails(monkeypatch):
+    captured_otps.clear()
+
+    def fake_send_otp_email(to_email: str, otp_code: str) -> bool:
+        captured_otps[to_email.lower().strip()] = otp_code
+        return True
+
+    monkeypatch.setattr("app.services.email_service.send_otp_email", fake_send_otp_email)
+
+
 def helper_login(
     client: TestClient, email: str, display_name: str | None = None
 ) -> tuple[str, dict[str, str]]:
@@ -44,7 +58,9 @@ def helper_login(
         json={"email": email, "display_name": display_name or email.split("@")[0]},
     )
     assert req_res.status_code == 200
-    otp = req_res.json()["dev_otp"]
+    assert "dev_otp" not in req_res.json()
+    otp = captured_otps.get(email.lower().strip())
+    assert otp is not None
 
     verify_res = client.post(
         "/api/v1/auth/verify-otp",
@@ -62,8 +78,9 @@ def test_auth_flows(client):
         "/api/v1/auth/request-otp", json={"email": "user@test.com", "display_name": "Test User"}
     )
     assert req.status_code == 200
-    otp = req.json()["dev_otp"]
-    assert len(otp) == 6
+    assert "dev_otp" not in req.json()
+    otp = captured_otps.get("user@test.com")
+    assert otp is not None and len(otp) == 6
 
     # Verify with invalid OTP
     bad_verify = client.post(
@@ -103,7 +120,9 @@ def test_full_api_lifecycle(client):
         json={"email": "alice@example.com", "display_name": "Alice"},
     )
     assert res.status_code == 200
-    otp = res.json()["dev_otp"]
+    assert "dev_otp" not in res.json()
+    otp = captured_otps.get("alice@example.com")
+    assert otp is not None
 
     # 2. Verify OTP
     v_res = client.post(
@@ -435,6 +454,23 @@ def test_tree_cycle_detection_and_viewer_privacy(client):
     assert viewer_view["focus_person"]["birth_date"] is None
     assert viewer_view["focus_person"]["birth_place"] is None
     assert viewer_view["parents"][0]["birth_date"] == "1950-01-01"
+
+    # Viewer also sees masked PII on direct GET /people/{id}
+    viewer_get_person = client.get(
+        f"/api/v1/workspaces/{ws_id}/people/{root['id']}", headers=viewer_headers
+    ).json()
+    assert viewer_get_person["birth_date"] is None
+    assert viewer_get_person["birth_place"] is None
+
+    # Viewer also sees masked PII on GET /people list
+    viewer_people_list = client.get(
+        f"/api/v1/workspaces/{ws_id}/people", headers=viewer_headers
+    ).json()
+    living_in_list = next(p for p in viewer_people_list if p["id"] == root["id"])
+    assert living_in_list["birth_date"] is None
+    assert living_in_list["birth_place"] is None
+    deceased_in_list = next(p for p in viewer_people_list if p["id"] == parent["id"])
+    assert deceased_in_list["birth_date"] == "1950-01-01"
 
     # Cycle test: Attempting to add ancestor as child of root -> 400 Bad Request
     cycle_res = client.post(

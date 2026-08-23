@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -15,18 +15,18 @@ router = APIRouter()
 @router.post("/request-otp", response_model=OTPResponse)
 def request_otp(
     req: OTPRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     _token, raw_otp = auth_service.request_otp(db, email=req.email, display_name=req.display_name)
     db.commit()
 
-    # Dispatch verification email (via SMTP / Resend or console fallback)
-    email_service.send_otp_email(to_email=req.email, otp_code=raw_otp)
+    # Dispatch verification email in background (via SMTP / Resend or console fallback)
+    background_tasks.add_task(email_service.send_otp_email, to_email=req.email, otp_code=raw_otp)
 
     return {
         "message": "OTP sent successfully",
         "email": req.email,
-        "dev_otp": raw_otp,
     }
 
 

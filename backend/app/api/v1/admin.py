@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -21,47 +22,66 @@ def get_all_workspaces(
     db: Session = Depends(get_db),
 ) -> Any:
     workspaces = list(db.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all())
+    if not workspaces:
+        return []
+
+    # 1. Batch member counts
+    member_counts: dict[uuid.UUID, int] = {
+        row[0]: row[1]
+        for row in db.execute(
+            select(WorkspaceMember.workspace_id, func.count(WorkspaceMember.id)).group_by(
+                WorkspaceMember.workspace_id
+            )
+        ).all()
+    }
+
+    # 2. Batch active people counts
+    people_counts: dict[uuid.UUID, int] = {
+        row[0]: row[1]
+        for row in db.execute(
+            select(Person.workspace_id, func.count(Person.id))
+            .where(Person.is_deleted.is_(False))
+            .group_by(Person.workspace_id)
+        ).all()
+    }
+
+    # 3. Batch admin members & users
+    admin_members = list(
+        db.scalars(
+            select(WorkspaceMember).where(
+                WorkspaceMember.role.in_(["admin", "owner"]),
+            )
+        ).all()
+    )
+    ws_admin_map: dict[uuid.UUID, set[uuid.UUID]] = {}
+    all_admin_user_ids: set[uuid.UUID] = set()
+
+    for m in admin_members:
+        ws_admin_map.setdefault(m.workspace_id, set()).add(m.user_id)
+        all_admin_user_ids.add(m.user_id)
+
+    for ws in workspaces:
+        ws_admin_map.setdefault(ws.id, set()).add(ws.created_by_user_id)
+        all_admin_user_ids.add(ws.created_by_user_id)
+
+    user_map = (
+        {u.id: u for u in db.scalars(select(User).where(User.id.in_(all_admin_user_ids))).all()}
+        if all_admin_user_ids
+        else {}
+    )
 
     result = []
     for ws in workspaces:
-        # Count members
-        member_count = (
-            db.scalar(
-                select(func.count(WorkspaceMember.id)).where(WorkspaceMember.workspace_id == ws.id)
+        admin_uids = ws_admin_map.get(ws.id, set())
+        admins_summary = [
+            AdminUserSummary(
+                id=u.id,
+                email=u.email,
+                display_name=u.display_name,
             )
-            or 0
-        )
-
-        # Count active people
-        people_count = (
-            db.scalar(
-                select(func.count(Person.id)).where(
-                    Person.workspace_id == ws.id,
-                    Person.is_deleted.is_(False),
-                )
-            )
-            or 0
-        )
-
-        # Get admins
-        admin_members = list(
-            db.scalars(
-                select(WorkspaceMember).where(
-                    WorkspaceMember.workspace_id == ws.id,
-                    WorkspaceMember.role.in_(["admin", "owner"]),
-                )
-            ).all()
-        )
-        admin_user_ids = [m.user_id for m in admin_members]
-        if ws.created_by_user_id not in admin_user_ids:
-            admin_user_ids.append(ws.created_by_user_id)
-
-        admin_users = (
-            list(db.scalars(select(User).where(User.id.in_(admin_user_ids))).all())
-            if admin_user_ids
-            else []
-        )
-
+            for uid in admin_uids
+            if (u := user_map.get(uid)) is not None
+        ]
         result.append(
             AdminWorkspaceItem(
                 id=ws.id,
@@ -69,16 +89,9 @@ def get_all_workspaces(
                 slug=ws.slug,
                 description=ws.description,
                 created_at=ws.created_at,
-                member_count=member_count,
-                people_count=people_count,
-                admins=[
-                    AdminUserSummary(
-                        id=u.id,
-                        email=u.email,
-                        display_name=u.display_name,
-                    )
-                    for u in admin_users
-                ],
+                member_count=member_counts.get(ws.id, 0),
+                people_count=people_counts.get(ws.id, 0),
+                admins=admins_summary,
             )
         )
 

@@ -7,6 +7,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create unprivileged system user and group for runtime isolation
+RUN groupadd -g 10001 lores && \
+    useradd -u 10001 -g lores -s /bin/sh -M lores
+
 # Install python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -18,8 +22,11 @@ COPY app/ ./app/
 ENV PYTHONUNBUFFERED=1 \
     DATABASE_URL=sqlite:///./data/lores.db
 
-# Persistent volume directory for SQLite data
-RUN mkdir -p /app/data
+# Persistent volume directory for SQLite data with non-root ownership
+RUN mkdir -p /app/data && chown -R lores:lores /app
+
+# Switch to non-root user
+USER lores
 
 EXPOSE 8000
 

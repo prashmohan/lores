@@ -18,6 +18,7 @@ import { BirdseyeMapCanvas } from './components/map/BirdseyeMapCanvas';
 import { ActivityFeedModal } from './components/history/ActivityFeedModal';
 import { TrashCanModal } from './components/history/TrashCanModal';
 import { CreateWorkspaceModal } from './components/workspace/CreateWorkspaceModal';
+import { FamilyMembersModal } from './components/workspace/FamilyMembersModal';
 import { SuperAdminDashboard } from './components/admin/SuperAdminDashboard';
 import { LoginForm } from './components/auth/LoginForm';
 import { VerifyOtpModal } from './components/auth/VerifyOtpModal';
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
 
   // Loading & Error states
@@ -420,14 +422,20 @@ export const App: React.FC = () => {
     );
   }
 
+  const currentMembership = workspaces.find((w) => w.workspace.id === currentWorkspace?.id);
+  const userRole = currentMembership?.role || (currentUser?.is_superadmin ? 'admin' : 'viewer');
+  const isViewer = userRole === 'viewer';
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header
         currentUser={currentUser}
         workspaces={workspaces}
         currentWorkspace={currentWorkspace}
+        userRole={userRole}
         onSelectWorkspace={initWorkspaceTree}
         onCreateWorkspace={() => setIsCreateWorkspaceOpen(true)}
+        onOpenMembers={() => setIsMembersOpen(true)}
         onOpenSuperAdmin={() => setIsSuperAdminOpen(true)}
         onLogout={handleLogout}
         highContrast={highContrast}
@@ -513,6 +521,7 @@ export const App: React.FC = () => {
         {currentWorkspace && activeTab === 'focus' && focusNeighborhood && (
           <FocusPersonView
             neighborhood={focusNeighborhood}
+            isViewer={isViewer}
             onSelectPerson={handleSelectPerson}
             onAddRelative={handleOpenAddRelative}
             onEditPerson={handleOpenEditPerson}
@@ -529,7 +538,7 @@ export const App: React.FC = () => {
               handleSelectPerson(id);
               setActiveTab('focus');
             }}
-            onEditPerson={(p) => handleOpenEditPerson(p as PersonSummary)}
+            onEditPerson={!isViewer ? (p) => handleOpenEditPerson(p as PersonSummary) : undefined}
           />
         )}
 
@@ -543,60 +552,64 @@ export const App: React.FC = () => {
             <div>
               <h2 className="text-2xl font-black text-slate-900">Start Your Family Tree</h2>
               <p className="text-slate-600 text-sm mt-1 font-medium">
-                Add yourself or the oldest known relative to begin building your family history.
+                {isViewer
+                  ? 'This family tree is currently empty. A family admin or collaborator can add the initial relatives.'
+                  : 'Add yourself or the oldest known relative to begin building your family history.'}
               </p>
             </div>
 
-            <form onSubmit={handleCreateRootPerson} className="space-y-4 text-left">
-              <div>
-                <label htmlFor="root_first_name" className="block text-sm font-bold text-slate-800 mb-1">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="root_first_name"
-                  name="first_name"
-                  type="text"
-                  required
-                  placeholder="e.g. Margaret"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
-                />
-              </div>
+            {!isViewer && (
+              <form onSubmit={handleCreateRootPerson} className="space-y-4 text-left">
+                <div>
+                  <label htmlFor="root_first_name" className="block text-sm font-bold text-slate-800 mb-1">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="root_first_name"
+                    name="first_name"
+                    type="text"
+                    required
+                    placeholder="e.g. Margaret"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-800 mb-1">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="root_last_name"
-                  name="last_name"
-                  type="text"
-                  required
-                  placeholder="e.g. Miller"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
-                />
-              </div>
+                <div>
+                  <label htmlFor="root_last_name" className="block text-sm font-bold text-slate-800 mb-1">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="root_last_name"
+                    name="last_name"
+                    type="text"
+                    required
+                    placeholder="e.g. Miller"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="root_birth_date" className="block text-sm font-bold text-slate-800 mb-1">
-                  Birth Date <span className="text-xs text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <input
-                  id="root_birth_date"
-                  name="birth_date"
-                  type="text"
-                  placeholder="e.g. 1942-05-12 or 1942"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
-                />
-              </div>
+                <div>
+                  <label htmlFor="root_birth_date" className="block text-sm font-bold text-slate-800 mb-1">
+                    Birth Date <span className="text-xs text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    id="root_birth_date"
+                    name="birth_date"
+                    type="text"
+                    placeholder="e.g. 1942-05-12 or 1942"
+                    className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-amber-500 text-base font-semibold"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full mt-4 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-base transition-colors shadow flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Plus className="w-5 h-5 stroke-[2.5]" />
-                <span>Add Root Person</span>
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="w-full mt-4 py-3.5 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-base transition-colors shadow flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Plus className="w-5 h-5 stroke-[2.5]" />
+                  <span>Add Root Person</span>
+                </button>
+              </form>
+            )}
           </div>
         )}
       </main>
@@ -635,6 +648,17 @@ export const App: React.FC = () => {
         onClose={() => setIsCreateWorkspaceOpen(false)}
         onSubmit={handleCreateWorkspace}
       />
+
+      {/* Family Members & Roles Modal */}
+      {currentWorkspace && (
+        <FamilyMembersModal
+          isOpen={isMembersOpen}
+          onClose={() => setIsMembersOpen(false)}
+          workspaceId={currentWorkspace.id}
+          workspaceName={currentWorkspace.name}
+          currentUserId={currentUser?.id}
+        />
+      )}
 
       {/* Super Admin Dashboard Modal */}
       <SuperAdminDashboard

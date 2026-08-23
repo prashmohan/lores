@@ -7,6 +7,7 @@ import { PersonCard } from '../src/components/tree/PersonCard';
 import { BirdseyeMapCanvas, type MapPerson } from '../src/components/map/BirdseyeMapCanvas';
 import { AddRelativeModal } from '../src/components/tree/AddRelativeModal';
 import { CreateWorkspaceModal } from '../src/components/workspace/CreateWorkspaceModal';
+import { FamilyMembersModal } from '../src/components/workspace/FamilyMembersModal';
 import { SuperAdminDashboard } from '../src/components/admin/SuperAdminDashboard';
 import { ActivityFeedModal } from '../src/components/history/ActivityFeedModal';
 import { TrashCanModal } from '../src/components/history/TrashCanModal';
@@ -172,6 +173,20 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
     expect(results).toHaveNoViolations();
   });
 
+  it('FamilyMembersModal open dialog passes axe accessibility audit', async () => {
+    const { container } = render(
+      <FamilyMembersModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        workspaceName="The Miller Family"
+        currentUserId="u-1"
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
   it('SuperAdminDashboard open dialog passes axe accessibility audit', async () => {
     const { container } = render(
       <SuperAdminDashboard
@@ -235,6 +250,7 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
         currentUser={mockUser}
         workspaces={[mockMembership]}
         currentWorkspace={mockWorkspace}
+        userRole="admin"
         onSelectWorkspace={vi.fn()}
         onLogout={vi.fn()}
         highContrast={false}

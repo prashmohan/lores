@@ -45,6 +45,8 @@ class WorkspaceMemberRead(WorkspaceMemberBase):
     id: uuid.UUID
     workspace_id: uuid.UUID
     user_id: uuid.UUID
+    email: str | None = None
+    display_name: str | None = None
     invited_by_user_id: uuid.UUID | None = None
     joined_at: datetime
 

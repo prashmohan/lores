@@ -1,13 +1,15 @@
 import React from 'react';
-import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert } from 'lucide-react';
+import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert, Users } from 'lucide-react';
 import type { UserRead, UserWorkspaceMembership, WorkspaceRead } from '../../types/api';
 
 interface HeaderProps {
   currentUser: UserRead | null;
   workspaces: UserWorkspaceMembership[];
   currentWorkspace: WorkspaceRead | null;
+  userRole?: string | null;
   onSelectWorkspace: (workspace: WorkspaceRead) => void;
   onCreateWorkspace?: () => void;
+  onOpenMembers?: () => void;
   onOpenSuperAdmin?: () => void;
   onLogout: () => void;
   highContrast: boolean;
@@ -18,13 +20,17 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   workspaces,
   currentWorkspace,
+  userRole,
   onSelectWorkspace,
   onCreateWorkspace,
+  onOpenMembers,
   onOpenSuperAdmin,
   onLogout,
   highContrast,
   onToggleHighContrast,
 }) => {
+  const canManageMembers = userRole === 'admin' || userRole === 'owner' || currentUser?.is_superadmin;
+
   return (
     <header className="bg-white border-b-2 border-slate-200 px-4 sm:px-8 py-3 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -92,8 +98,22 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Controls: Super Admin + High Contrast + User Profile */}
+        {/* Controls: Members + Super Admin + High Contrast + User Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Family Members Management Trigger (Admins only) */}
+          {canManageMembers && onOpenMembers && currentWorkspace && (
+            <button
+              type="button"
+              onClick={onOpenMembers}
+              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-800 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              title="Manage Family Members & Roles"
+              aria-label="Manage Family Members"
+            >
+              <Users className="w-4 h-4 text-slate-700" />
+              <span className="hidden sm:inline">Members</span>
+            </button>
+          )}
+
           {/* Super Admin Dashboard Trigger */}
           {currentUser?.is_superadmin && onOpenSuperAdmin && (
             <button

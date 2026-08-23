@@ -1,5 +1,6 @@
 import React from 'react';
 import { PersonCard } from './PersonCard';
+import { Eye } from 'lucide-react';
 import type { FocusNeighborhoodResponse, PersonSummary } from '../../types/api';
 
 export type RelativeType = 'parent' | 'partner' | 'child' | 'sibling';
@@ -7,8 +8,9 @@ export type RelativeType = 'parent' | 'partner' | 'child' | 'sibling';
 interface FocusPersonViewProps {
   data?: FocusNeighborhoodResponse;
   neighborhood?: FocusNeighborhoodResponse;
+  isViewer?: boolean;
   onSelectPerson: (id: string) => void;
-  onAddRelative: (type: RelativeType) => void;
+  onAddRelative?: (type: RelativeType) => void;
   onEditPerson?: (person: PersonSummary) => void;
   workspaceId?: string;
 }
@@ -16,6 +18,7 @@ interface FocusPersonViewProps {
 export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
   data: propData,
   neighborhood,
+  isViewer = false,
   onSelectPerson,
   onAddRelative,
   onEditPerson,
@@ -23,8 +26,21 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
   const data = propData || neighborhood;
   if (!data) return null;
 
+  const activeEditPerson = !isViewer ? onEditPerson : undefined;
+
   return (
     <div className="flex flex-col items-center gap-8 py-8 max-w-5xl mx-auto px-4 select-none">
+      {/* Viewer Mode Banner */}
+      {isViewer && (
+        <div
+          role="status"
+          className="px-4 py-1.5 rounded-full bg-blue-50 border-2 border-blue-200 text-blue-900 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs"
+        >
+          <Eye className="w-3.5 h-3.5 text-blue-700" />
+          <span>Viewer Access (Read-Only)</span>
+        </div>
+      )}
+
       {/* Parents Section (Top) */}
       <section className="flex flex-col items-center gap-3 w-full" aria-label="Parents">
         <span className="text-xs font-bold uppercase tracking-widest text-slate-600 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
@@ -36,18 +52,20 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               key={parent.id}
               person={parent}
               onClick={() => onSelectPerson(parent.id)}
-              onEdit={onEditPerson}
+              onEdit={activeEditPerson}
             />
           ))}
-          <button
-            type="button"
-            onClick={() => onAddRelative('parent')}
-            className="min-h-[52px] px-5 py-3 border-2 border-dashed border-slate-300 hover:border-slate-500 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer"
-            aria-label="+ Add Parent"
-          >
-            <span className="text-lg font-bold" aria-hidden="true">+</span>
-            <span>Add Parent</span>
-          </button>
+          {!isViewer && onAddRelative && (
+            <button
+              type="button"
+              onClick={() => onAddRelative('parent')}
+              className="min-h-[52px] px-5 py-3 border-2 border-dashed border-slate-300 hover:border-slate-500 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer"
+              aria-label="+ Add Parent"
+            >
+              <span className="text-lg font-bold" aria-hidden="true">+</span>
+              <span>Add Parent</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -64,18 +82,20 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 key={sibling.id}
                 person={sibling}
                 onClick={() => onSelectPerson(sibling.id)}
-                onEdit={onEditPerson}
+                onEdit={activeEditPerson}
               />
             ))}
-            <button
-              type="button"
-              onClick={() => onAddRelative('sibling')}
-              className="min-h-[48px] px-4 py-2 border border-dashed border-slate-300 hover:border-slate-500 rounded-lg text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
-              aria-label="+ Add Sibling"
-            >
-              <span className="text-base font-bold" aria-hidden="true">+</span>
-              <span>Add Sibling</span>
-            </button>
+            {!isViewer && onAddRelative && (
+              <button
+                type="button"
+                onClick={() => onAddRelative('sibling')}
+                className="min-h-[48px] px-4 py-2 border border-dashed border-slate-300 hover:border-slate-500 rounded-lg text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
+                aria-label="+ Add Sibling"
+              >
+                <span className="text-base font-bold" aria-hidden="true">+</span>
+                <span>Add Sibling</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -84,7 +104,7 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
           <span className="text-xs font-extrabold uppercase tracking-widest text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-300 mb-2">
             Focus Person
           </span>
-          <PersonCard person={data.focus_person} isFocus={true} onEdit={onEditPerson} />
+          <PersonCard person={data.focus_person} isFocus={true} onEdit={activeEditPerson} />
         </div>
 
         {/* Spouse / Partner (Right Column) */}
@@ -98,18 +118,20 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
                 key={partner.id}
                 person={partner}
                 onClick={() => onSelectPerson(partner.id)}
-                onEdit={onEditPerson}
+                onEdit={activeEditPerson}
               />
             ))}
-            <button
-              type="button"
-              onClick={() => onAddRelative('partner')}
-              className="min-h-[48px] px-4 py-2 border border-dashed border-slate-300 hover:border-slate-500 rounded-lg text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
-              aria-label="+ Add Partner"
-            >
-              <span className="text-base font-bold" aria-hidden="true">+</span>
-              <span>Add Partner</span>
-            </button>
+            {!isViewer && onAddRelative && (
+              <button
+                type="button"
+                onClick={() => onAddRelative('partner')}
+                className="min-h-[48px] px-4 py-2 border border-dashed border-slate-300 hover:border-slate-500 rounded-lg text-xs font-bold text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer"
+                aria-label="+ Add Partner"
+              >
+                <span className="text-base font-bold" aria-hidden="true">+</span>
+                <span>Add Partner</span>
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -125,18 +147,20 @@ export const FocusPersonView: React.FC<FocusPersonViewProps> = ({
               key={child.id}
               person={child}
               onClick={() => onSelectPerson(child.id)}
-              onEdit={onEditPerson}
+              onEdit={activeEditPerson}
             />
           ))}
-          <button
-            type="button"
-            onClick={() => onAddRelative('child')}
-            className="min-h-[52px] px-5 py-3 border-2 border-dashed border-slate-300 hover:border-slate-500 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer"
-            aria-label="+ Add Child"
-          >
-            <span className="text-lg font-bold" aria-hidden="true">+</span>
-            <span>Add Child</span>
-          </button>
+          {!isViewer && onAddRelative && (
+            <button
+              type="button"
+              onClick={() => onAddRelative('child')}
+              className="min-h-[52px] px-5 py-3 border-2 border-dashed border-slate-300 hover:border-slate-500 rounded-xl text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-semibold text-sm transition-colors flex items-center gap-2 cursor-pointer"
+              aria-label="+ Add Child"
+            >
+              <span className="text-lg font-bold" aria-hidden="true">+</span>
+              <span>Add Child</span>
+            </button>
+          )}
         </div>
       </section>
     </div>

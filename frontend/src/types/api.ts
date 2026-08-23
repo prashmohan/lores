@@ -50,6 +50,8 @@ export interface WorkspaceMemberRead {
   workspace_id: string;
   user_id: string;
   role: string;
+  email?: string | null;
+  display_name?: string | null;
   invited_by_user_id?: string | null;
   joined_at: string;
 }

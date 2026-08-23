@@ -41,6 +41,7 @@ describe('Header', () => {
         currentUser={mockUser}
         workspaces={mockMemberships}
         currentWorkspace={mockWorkspace}
+        userRole="admin"
         onSelectWorkspace={onSelectWorkspace}
         onLogout={onLogout}
         highContrast={false}
@@ -54,8 +55,32 @@ describe('Header', () => {
     expect(screen.getByRole('combobox')).toHaveValue('w1');
   });
 
+  it('renders Members button for family admin and triggers onOpenMembers', () => {
+    const onOpenMembers = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        userRole="admin"
+        onSelectWorkspace={vi.fn()}
+        onOpenMembers={onOpenMembers}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const membersBtn = screen.getByRole('button', { name: /Manage Family Members/i });
+    expect(membersBtn).toBeInTheDocument();
+    fireEvent.click(membersBtn);
+    expect(onOpenMembers).toHaveBeenCalledTimes(1);
+  });
+
   it('triggers high contrast toggle on button click', () => {
     const onToggleHighContrast = vi.fn();
+    const onLogout = vi.fn();
 
     render(
       <Header
@@ -63,7 +88,7 @@ describe('Header', () => {
         workspaces={mockMemberships}
         currentWorkspace={mockWorkspace}
         onSelectWorkspace={vi.fn()}
-        onLogout={vi.fn()}
+        onLogout={onLogout}
         highContrast={false}
         onToggleHighContrast={onToggleHighContrast}
       />

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_workspace_role, require_role
 from app.db.session import get_db
 from app.models.user import User
+from app.models.workspace import WorkspaceMember
 from app.schemas.workspace import (
     UserWorkspaceMembership,
     WorkspaceCreate,
@@ -67,7 +68,28 @@ def list_members(
     _role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
-    return workspace_service.list_workspace_members(db, workspace_id)
+    stmt = (
+        select(WorkspaceMember, User.email, User.display_name)
+        .join(User, WorkspaceMember.user_id == User.id)
+        .where(WorkspaceMember.workspace_id == workspace_id)
+        .order_by(WorkspaceMember.joined_at.asc())
+    )
+    rows = db.execute(stmt).all()
+    results = []
+    for member, email, display_name in rows:
+        results.append(
+            WorkspaceMemberRead(
+                id=member.id,
+                workspace_id=member.workspace_id,
+                user_id=member.user_id,
+                role=member.role,
+                email=email,
+                display_name=display_name,
+                invited_by_user_id=member.invited_by_user_id,
+                joined_at=member.joined_at,
+            )
+        )
+    return results
 
 
 @router.post("/{workspace_id}/members", response_model=WorkspaceMemberRead)
@@ -101,7 +123,16 @@ def add_member(
 
     db.commit()
     db.refresh(member)
-    return member
+    return WorkspaceMemberRead(
+        id=member.id,
+        workspace_id=member.workspace_id,
+        user_id=member.user_id,
+        role=member.role,
+        email=target_user.email,
+        display_name=target_user.display_name,
+        invited_by_user_id=member.invited_by_user_id,
+        joined_at=member.joined_at,
+    )
 
 
 @router.delete("/{workspace_id}/members/{user_id}")

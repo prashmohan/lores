@@ -71,6 +71,7 @@ describe('App navigation and modals', () => {
     vi.spyOn(tokenStorage, 'get').mockReturnValue('mock-token');
     vi.spyOn(api.auth, 'getMe').mockResolvedValue(mockUser);
     vi.spyOn(api.workspaces, 'list').mockResolvedValue(mockWorkspaces);
+    vi.spyOn(api.workspaces, 'listMembers').mockResolvedValue([]);
     vi.spyOn(api.people, 'list').mockResolvedValue(mockPeople);
     vi.spyOn(api.tree, 'getFocusNeighborhood').mockResolvedValue(mockNeighborhood);
     vi.spyOn(api.trash, 'getAuditLogs').mockResolvedValue([]);
@@ -113,6 +114,20 @@ describe('App navigation and modals', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Create New Family Tree/i })).toBeInTheDocument();
+    });
+  });
+
+  it('opens FamilyMembersModal when Members button is clicked in header for admin', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Manage Family Members/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Manage Family Members/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Family Members & Roles/i })).toBeInTheDocument();
     });
   });
 

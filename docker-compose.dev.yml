@@ -19,8 +19,10 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL:-noreply@lores.family}
-      - EMAILS_FROM_NAME=${EMAILS_FROM_NAME:-Lores Family Tree}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL:-${SMTP_FROM_EMAIL:-noreply@lores.family}}
+      - EMAILS_FROM_NAME=${EMAILS_FROM_NAME:-${SMTP_FROM_NAME:-Lores Family Tree}}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-${EMAILS_FROM_EMAIL:-noreply@lores.family}}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-${EMAILS_FROM_NAME:-Lores Family Tree}}
       - SMTP_TLS=${SMTP_TLS:-true}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
     volumes:

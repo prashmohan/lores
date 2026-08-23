@@ -39,17 +39,35 @@ def fixture_client() -> Generator[TestClient, None, None]:
 
 
 captured_otps: dict[str, str] = {}
+captured_invitations: list[dict[str, str]] = []
 
 
 @pytest.fixture(autouse=True)
 def capture_emails(monkeypatch):
     captured_otps.clear()
+    captured_invitations.clear()
 
     def fake_send_otp_email(to_email: str, otp_code: str) -> bool:
         captured_otps[to_email.lower().strip()] = otp_code
         return True
 
+    def fake_send_invitation_email(
+        to_email: str, inviter_name: str, workspace_name: str, role: str
+    ) -> bool:
+        captured_invitations.append(
+            {
+                "to_email": to_email,
+                "inviter_name": inviter_name,
+                "workspace_name": workspace_name,
+                "role": role,
+            }
+        )
+        return True
+
     monkeypatch.setattr("app.services.email_service.send_otp_email", fake_send_otp_email)
+    monkeypatch.setattr(
+        "app.services.email_service.send_invitation_email", fake_send_invitation_email
+    )
 
 
 def helper_login(client: TestClient, email: str, display_name: str | None = None) -> dict[str, str]:
@@ -120,6 +138,21 @@ def test_creator_automatically_admin_and_can_invite_members(client: TestClient) 
         headers=admin_headers,
     )
     assert len(list_resp.json()) == 3
+
+    # Verify invitation emails were sent to both invited members
+    assert len(captured_invitations) == 2
+    assert captured_invitations[0] == {
+        "to_email": "collab@example.com",
+        "inviter_name": "Admin User",
+        "workspace_name": "The Miller Family Tree",
+        "role": "collaborator",
+    }
+    assert captured_invitations[1] == {
+        "to_email": "viewer@example.com",
+        "inviter_name": "Admin User",
+        "workspace_name": "The Miller Family Tree",
+        "role": "viewer",
+    }
 
 
 def test_collaborator_can_edit_tree_but_cannot_manage_users(client: TestClient) -> None:

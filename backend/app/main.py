@@ -12,6 +12,11 @@ from app.config import get_settings
 from app.db.init_db import init_db
 from app.db.session import engine
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 # Ensure model metadata is registered
 _ = models
 logger = logging.getLogger("lores.main")

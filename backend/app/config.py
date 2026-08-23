@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str = "noreply@lores.family"
     EMAILS_FROM_NAME: str = "Lores Family Tree"
+    SMTP_FROM_EMAIL: str | None = None
+    SMTP_FROM_NAME: str | None = None
     SMTP_TLS: bool = True
 
     # Google OAuth / SSO Settings

@@ -21,8 +21,8 @@ def send_email(
     clean_to = "".join(c for c in to_email if c not in "\r\n").strip()
     clean_subject = "".join(c for c in subject if c not in "\r\n").strip()
 
-    if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.info(
+    if not settings.SMTP_HOST:
+        logger.warning(
             "[DEV EMAIL NOT SENT (NO SMTP)] To: %s | Subject: %s\nText: %s",
             clean_to,
             clean_subject,
@@ -30,8 +30,10 @@ def send_email(
         )
         return False
 
-    sender_name = "".join(c for c in (settings.EMAILS_FROM_NAME or "") if c not in "\r\n").strip()
-    sender_email = "".join(c for c in (settings.EMAILS_FROM_EMAIL or "") if c not in "\r\n").strip()
+    raw_from_name = getattr(settings, "SMTP_FROM_NAME", None) or settings.EMAILS_FROM_NAME or ""
+    raw_from_email = getattr(settings, "SMTP_FROM_EMAIL", None) or settings.EMAILS_FROM_EMAIL or ""
+    sender_name = "".join(c for c in raw_from_name if c not in "\r\n").strip()
+    sender_email = "".join(c for c in raw_from_email if c not in "\r\n").strip()
     from_header = f"{sender_name} <{sender_email}>" if sender_name else sender_email
 
     msg = MIMEMultipart("alternative")
@@ -53,14 +55,19 @@ def send_email(
             if settings.SMTP_TLS:
                 server.starttls()
 
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(sender_email, [clean_to], msg.as_string())
         server.quit()
         logger.info("Successfully sent email to %s (Subject: %s)", clean_to, clean_subject)
         return True
     except Exception as e:  # noqa: BLE001
         logger.error(
-            "Failed to send email to %s via SMTP (%s): %s", clean_to, settings.SMTP_HOST, e
+            "Failed to send email to %s via SMTP (%s:%s): %s",
+            clean_to,
+            settings.SMTP_HOST,
+            settings.SMTP_PORT,
+            e,
         )
         return False
 

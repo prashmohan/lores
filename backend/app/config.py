@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "Lores"
     APP_VERSION: str = "0.1.0"
+    APP_URL: str = "http://localhost:8156"
     DATABASE_URL: str = "sqlite:///./lores.db"
     JWT_SECRET: str = "lores-dev-secret-key-change-in-production-32bytes-min"
     JWT_ALGORITHM: str = "HS256"

@@ -123,6 +123,7 @@ def send_invitation_email(
     role: str,
 ) -> bool:
     """Send an email invitation notifying a family member they were added to a workspace."""
+    app_url = settings.APP_URL.rstrip("/")
     subject = f"{inviter_name} invited you to join the '{workspace_name}' Family Tree"
 
     text_body = f"""Hello,
@@ -131,7 +132,10 @@ def send_invitation_email(
 
 Lores is an accessible family tree and oral history builder designed for recording stories and memories.
 
-To access the family tree, open Lores in your browser and log in with your email ({to_email}).
+To access the family tree, open Lores in your browser:
+{app_url}
+
+Simply log in with your email ({to_email}) to view the family tree.
 
 Warm regards,
 Lores Family Tree
@@ -147,6 +151,8 @@ Lores Family Tree
     .logo {{ font-size: 24px; font-weight: 900; color: #0f172a; margin-bottom: 8px; }}
     .subtitle {{ font-size: 14px; color: #64748b; font-weight: 600; margin-bottom: 24px; }}
     .highlight {{ background-color: #f1f5f9; border-radius: 12px; padding: 16px; margin: 20px 0; border: 1px solid #cbd5e1; }}
+    .btn-container {{ text-align: center; margin: 28px 0 20px; }}
+    .btn {{ display: inline-block; background-color: #f59e0b; color: #0f172a; font-weight: 800; font-size: 16px; padding: 14px 32px; text-decoration: none; border-radius: 14px; }}
     .footer {{ font-size: 12px; color: #94a3b8; margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 16px; }}
   </style>
 </head>
@@ -161,15 +167,19 @@ Lores Family Tree
     </p>
     
     <div class="highlight">
-      <p style="margin: 0; font-size: 14px; color: #334155;">
+      <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.6;">
         <strong>Family Tree:</strong> {workspace_name}<br>
         <strong>Your Role:</strong> {role.capitalize()}<br>
         <strong>Invited Email:</strong> {to_email}
       </p>
     </div>
     
-    <p style="font-size: 14px; color: #475569; line-height: 1.5;">
-      To view the family tree and explore oral stories, simply open Lores in your browser and sign in using your email address.
+    <div class="btn-container">
+      <a href="{app_url}" class="btn" style="color: #0f172a; text-decoration: none;">🌳 Open Family Tree</a>
+    </div>
+
+    <p style="font-size: 13px; color: #64748b; text-align: center; margin-top: 12px;">
+      Or visit: <a href="{app_url}" style="color: #d97706; text-decoration: underline;">{app_url}</a>
     </p>
     
     <div class="footer">

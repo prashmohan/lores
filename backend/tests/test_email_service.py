@@ -53,6 +53,7 @@ def test_send_invitation_email_via_smtp_success():
         mock_settings.SMTP_PASSWORD = "mock-password"
         mock_settings.EMAILS_FROM_EMAIL = "onboarding@resend.dev"
         mock_settings.EMAILS_FROM_NAME = "Lores Family Tree"
+        mock_settings.APP_URL = "https://lores.example.com"
         mock_settings.SMTP_TLS = True
 
         mock_server = MagicMock()

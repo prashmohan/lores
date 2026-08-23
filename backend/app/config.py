@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: str = "Lores Family Tree"
     SMTP_TLS: bool = True
 
+    # Google OAuth / SSO Settings
+    GOOGLE_CLIENT_ID: str | None = None
+
     @property
     def cors_origins_list(self) -> list[str]:
         if not self.CORS_ORIGINS or self.CORS_ORIGINS.strip() == "*":

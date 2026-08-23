@@ -207,3 +207,20 @@ def test_otp_lockout_after_5_failed_attempts(db_session):
     # Subsequent attempt even with the correct valid OTP must fail
     with pytest.raises(ValueError, match="Invalid or expired"):
         verify_otp(db_session, email=email, code=valid_otp)
+
+
+def test_auth_config_and_google_schemas():
+    from app.schemas.auth import AuthConfigResponse, GoogleAuthRequest
+
+    req = GoogleAuthRequest(credential="mock_id_token_xyz")
+    assert req.credential == "mock_id_token_xyz"
+
+    cfg_enabled = AuthConfigResponse(
+        google_client_id="test-client-id.apps.googleusercontent.com", google_auth_enabled=True
+    )
+    assert cfg_enabled.google_auth_enabled is True
+    assert cfg_enabled.google_client_id == "test-client-id.apps.googleusercontent.com"
+
+    cfg_disabled = AuthConfigResponse(google_client_id=None, google_auth_enabled=False)
+    assert cfg_disabled.google_auth_enabled is False
+    assert cfg_disabled.google_client_id is None

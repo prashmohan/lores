@@ -8,12 +8,14 @@ import { BirdseyeMapCanvas, type MapPerson } from '../src/components/map/Birdsey
 import { AddRelativeModal } from '../src/components/tree/AddRelativeModal';
 import { CreateWorkspaceModal } from '../src/components/workspace/CreateWorkspaceModal';
 import { FamilyMembersModal } from '../src/components/workspace/FamilyMembersModal';
+import { DataBackupModal } from '../src/components/workspace/DataBackupModal';
 import { SuperAdminDashboard } from '../src/components/admin/SuperAdminDashboard';
 import { ActivityFeedModal } from '../src/components/history/ActivityFeedModal';
 import { TrashCanModal } from '../src/components/history/TrashCanModal';
 import { LoginForm } from '../src/components/auth/LoginForm';
 import { VerifyOtpModal } from '../src/components/auth/VerifyOtpModal';
 import { Header } from '../src/components/layout/Header';
+import { api } from '../src/lib/api';
 
 import type { FocusNeighborhoodResponse, PersonSummary, UserRead, WorkspaceRead, UserWorkspaceMembership } from '../src/types/api';
 
@@ -187,6 +189,19 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
     expect(results).toHaveNoViolations();
   });
 
+  it('DataBackupModal open dialog passes axe accessibility audit', async () => {
+    const { container } = render(
+      <DataBackupModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        workspaceName="The Miller Family"
+      />
+    );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
   it('SuperAdminDashboard open dialog passes axe accessibility audit', async () => {
     const { container } = render(
       <SuperAdminDashboard
@@ -227,6 +242,20 @@ describe('Accessibility (a11y) Automated Audits with Axe', () => {
     const { container } = render(
       <LoginForm onOtpRequested={vi.fn()} />
     );
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  it('LoginForm with Google SSO enabled passes axe accessibility audit', async () => {
+    vi.spyOn(api.auth, 'getConfig').mockResolvedValueOnce({
+      google_client_id: 'test-client-id.apps.googleusercontent.com',
+      google_auth_enabled: true,
+    });
+
+    const { container, findByTestId } = render(
+      <LoginForm onOtpRequested={vi.fn()} onLoginSuccess={vi.fn()} />
+    );
+    await findByTestId('google-sso-button');
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

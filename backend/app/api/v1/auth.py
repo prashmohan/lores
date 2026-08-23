@@ -4,12 +4,52 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.config import get_settings
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import OTPRequest, OTPResponse, OTPVerifyRequest, TokenResponse, UserRead
+from app.schemas.auth import (
+    AuthConfigResponse,
+    GoogleAuthRequest,
+    OTPRequest,
+    OTPResponse,
+    OTPVerifyRequest,
+    TokenResponse,
+    UserRead,
+)
 from app.services import auth_service, email_service
 
 router = APIRouter()
+
+
+@router.get("/config", response_model=AuthConfigResponse)
+def get_auth_config() -> dict[str, Any]:
+    settings = get_settings()
+    return {
+        "google_client_id": settings.GOOGLE_CLIENT_ID,
+        "google_auth_enabled": bool(settings.GOOGLE_CLIENT_ID),
+    }
+
+
+@router.post("/google", response_model=TokenResponse)
+def login_with_google(
+    req: GoogleAuthRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    try:
+        user, token = auth_service.verify_google_id_token(db, id_token=req.credential)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    db.commit()
+    return {
+        "access_token": token,
+        "token": token,
+        "token_type": "bearer",
+        "user": UserRead.model_validate(user),
+    }
 
 
 @router.post("/request-otp", response_model=OTPResponse)

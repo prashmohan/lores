@@ -1,9 +1,11 @@
 import secrets
+import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
-from jose import JWTError, jwt  # type: ignore[import-untyped]
+import httpx
+from jose import JWTError, jwk, jwt  # type: ignore[import-untyped]
 from passlib.context import CryptContext  # type: ignore[import-untyped]
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -154,3 +156,81 @@ def decode_token(token: str) -> dict[str, Any]:
         return payload
     except JWTError as e:
         raise ValueError("Invalid token") from e
+
+
+_google_jwks_cache: dict[str, Any] = {"keys": [], "expires_at": 0.0}
+
+
+def _verify_google_token_payload(id_token: str, client_id: str) -> dict[str, Any]:
+    """Verify Google ID token against Google's public JWKS certs."""
+    # 1. Fetch unverified header to get kid
+    unverified_header = jwt.get_unverified_header(id_token)
+    kid = unverified_header.get("kid")
+    if not kid:
+        raise ValueError("Invalid Google token: missing key id")
+
+    # 2. Fetch Google public JWKS certs (using in-memory cache)
+    now_ts = time.time()
+    keys: list[dict[str, Any]] = _google_jwks_cache.get("keys", [])
+    expires_at: float = float(_google_jwks_cache.get("expires_at", 0.0))
+
+    key_dict = next((k for k in keys if k.get("kid") == kid), None) if now_ts < expires_at else None
+
+    if not key_dict:
+        resp = httpx.get("https://www.googleapis.com/oauth2/v3/certs", timeout=10.0)
+        if resp.status_code != 200:
+            raise ValueError("Failed to fetch Google authentication certificates")
+        keys = resp.json().get("keys", [])
+        _google_jwks_cache["keys"] = keys
+        _google_jwks_cache["expires_at"] = now_ts + 3600.0
+        key_dict = next((k for k in keys if k.get("kid") == kid), None)
+
+    if not key_dict:
+        raise ValueError("Google authentication key not found")
+
+    public_key = jwk.construct(key_dict)
+
+    # 3. Decode & verify claims
+    payload: dict[str, Any] = jwt.decode(
+        id_token,
+        public_key.to_pem().decode("utf-8"),
+        algorithms=["RS256"],
+        audience=client_id,
+        issuer=["accounts.google.com", "https://accounts.google.com"],
+    )
+    return payload
+
+
+def verify_google_id_token(db: Session, id_token: str) -> tuple[User, str]:
+    """Verify a Google ID token and return/provision the User and a Lores JWT session."""
+    if not settings.GOOGLE_CLIENT_ID:
+        raise ValueError("Google SSO is not configured on this server")
+
+    try:
+        payload = _verify_google_token_payload(id_token, settings.GOOGLE_CLIENT_ID)
+    except Exception as e:
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"Invalid Google ID token: {e}") from e
+
+    if not payload.get("email_verified"):
+        raise ValueError("Google email is not verified")
+
+    email = str(payload.get("email") or "").lower().strip()
+    if not email:
+        raise ValueError("Google ID token missing email claim")
+
+    now = datetime.now(UTC)
+    stmt = select(User).where(User.email == email)
+    user = db.scalar(stmt)
+
+    if not user:
+        name = payload.get("name") or email.split("@")[0].capitalize()
+        user = User(email=email, display_name=name)
+        db.add(user)
+
+    user.last_login_at = now
+    db.flush()
+
+    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+    return user, jwt_token

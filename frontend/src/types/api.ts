@@ -29,6 +29,15 @@ export interface OTPVerifyRequest {
   code: string;
 }
 
+export interface AuthConfigResponse {
+  google_client_id: string | null;
+  google_auth_enabled: boolean;
+}
+
+export interface GoogleAuthRequest {
+  credential: string;
+}
+
 export interface WorkspaceRead {
   id: string;
   name: string;
@@ -250,5 +259,30 @@ export interface AdminSystemStats {
   total_users: number;
   total_people: number;
   total_lore_notes: number;
+}
+
+export interface ImportSummaryRead {
+  success: boolean;
+  filename: string;
+  format: 'gedcom' | 'json' | string;
+  people_created: number;
+  people_merged: number;
+  unions_created: number;
+  children_linked: number;
+  lore_notes_created: number;
+  warnings: string[];
+}
+
+export interface MapNodePosition {
+  x: number;
+  y: number;
+}
+
+export interface MapLayoutRead {
+  positions: Record<string, MapNodePosition>;
+}
+
+export interface MapLayoutUpdate {
+  positions: Record<string, MapNodePosition>;
 }
 

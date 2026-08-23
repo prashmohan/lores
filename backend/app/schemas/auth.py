@@ -41,3 +41,12 @@ class TokenPayload(BaseModel):
     sub: str
     email: str
     exp: int | None = None
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str
+
+
+class AuthConfigResponse(BaseModel):
+    google_client_id: str | None = None
+    google_auth_enabled: bool = False

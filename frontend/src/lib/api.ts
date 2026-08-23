@@ -2,11 +2,15 @@ import type {
   AddRelativeRequest,
   AdminSystemStats,
   AdminWorkspaceItem,
+  AuthConfigResponse,
   AuditLogRead,
   FocusNeighborhoodResponse,
+  ImportSummaryRead,
   LoreNoteCreate,
   LoreNoteRead,
   LoreNoteUpdate,
+  MapLayoutRead,
+  MapNodePosition,
   OTPRequest,
   OTPResponse,
   OTPVerifyRequest,
@@ -65,13 +69,16 @@ export const tokenStorage = {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = tokenStorage.get();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
+  const headers: Record<string, string> = {
+    ...((options.headers as Record<string, string>) || {}),
   };
 
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -105,6 +112,47 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json() as Promise<T>;
 }
 
+async function requestBlob(endpoint: string, options: RequestInit = {}): Promise<Blob> {
+  const token = tokenStorage.get();
+  const headers: Record<string, string> = {
+    ...((options.headers as Record<string, string>) || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+    let errorData: unknown = null;
+    try {
+      errorData = await response.json();
+      if (typeof errorData === 'object' && errorData !== null) {
+        if ('detail' in errorData) {
+          const detail = (errorData as { detail: unknown }).detail;
+          if (typeof detail === 'string') {
+            errorDetail = detail;
+          } else if (typeof detail === 'object' && detail !== null && 'message' in detail) {
+            errorDetail = (detail as { message: string }).message;
+          } else {
+            errorDetail = JSON.stringify(detail);
+          }
+        }
+      }
+    } catch {
+      // Response wasn't json
+    }
+    throw new ApiError(response.status, errorDetail, errorData);
+  }
+
+  return response.blob();
+}
+
 export const api = {
   // Auth
   auth: {
@@ -126,6 +174,19 @@ export const api = {
     },
 
     getMe: (): Promise<UserRead> => request<UserRead>('/auth/me'),
+
+    getConfig: (): Promise<AuthConfigResponse> => request<AuthConfigResponse>('/auth/config'),
+
+    loginWithGoogle: async (credential: string): Promise<TokenResponse> => {
+      const result = await request<TokenResponse>('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ credential }),
+      });
+      if (result.access_token) {
+        tokenStorage.set(result.access_token);
+      }
+      return result;
+    },
 
     logout: async (): Promise<{ message: string }> => {
       try {
@@ -161,6 +222,23 @@ export const api = {
 
     removeMember: (workspaceId: string, userId: string): Promise<{ message: string }> =>
       request<{ message: string }>(`/workspaces/${workspaceId}/members/${userId}`, {
+        method: 'DELETE',
+      }),
+
+    getMapLayout: (workspaceId: string): Promise<MapLayoutRead> =>
+      request<MapLayoutRead>(`/workspaces/${workspaceId}/map-layout`),
+
+    updateMapLayout: (
+      workspaceId: string,
+      positions: Record<string, MapNodePosition>
+    ): Promise<MapLayoutRead> =>
+      request<MapLayoutRead>(`/workspaces/${workspaceId}/map-layout`, {
+        method: 'PUT',
+        body: JSON.stringify({ positions }),
+      }),
+
+    resetMapLayout: (workspaceId: string): Promise<{ message: string }> =>
+      request<{ message: string }>(`/workspaces/${workspaceId}/map-layout`, {
         method: 'DELETE',
       }),
   },
@@ -292,5 +370,32 @@ export const api = {
 
     getStats: (): Promise<AdminSystemStats> =>
       request<AdminSystemStats>('/admin/stats'),
+  },
+
+  // Data Exchange (Export & Import)
+  dataExchange: {
+    exportGedcom: (workspaceId: string): Promise<Blob> =>
+      requestBlob(`/workspaces/${workspaceId}/export/gedcom`),
+
+    exportJson: (workspaceId: string): Promise<Blob> =>
+      requestBlob(`/workspaces/${workspaceId}/export/json`),
+
+    importGedcom: (workspaceId: string, file: File): Promise<ImportSummaryRead> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<ImportSummaryRead>(`/workspaces/${workspaceId}/import/gedcom`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    importJson: (workspaceId: string, file: File): Promise<ImportSummaryRead> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<ImportSummaryRead>(`/workspaces/${workspaceId}/import/json`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
   },
 };

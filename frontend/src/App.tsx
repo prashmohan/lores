@@ -9,6 +9,7 @@ import type {
   PersonRead,
   PersonSummary,
   PersonUpdate,
+  TreeEdge,
 } from './types/api';
 import { Header } from './components/layout/Header';
 import { FocusPersonView, type RelativeType } from './components/tree/FocusPersonView';
@@ -19,6 +20,7 @@ import { ActivityFeedModal } from './components/history/ActivityFeedModal';
 import { TrashCanModal } from './components/history/TrashCanModal';
 import { CreateWorkspaceModal } from './components/workspace/CreateWorkspaceModal';
 import { FamilyMembersModal } from './components/workspace/FamilyMembersModal';
+import { DataBackupModal } from './components/workspace/DataBackupModal';
 import { SuperAdminDashboard } from './components/admin/SuperAdminDashboard';
 import { LoginForm } from './components/auth/LoginForm';
 import { VerifyOtpModal } from './components/auth/VerifyOtpModal';
@@ -43,6 +45,8 @@ export const App: React.FC = () => {
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceRead | null>(null);
   const [focusNeighborhood, setFocusNeighborhood] = useState<FocusNeighborhoodResponse | null>(null);
   const [allPeople, setAllPeople] = useState<PersonRead[]>([]);
+  const [treeEdges, setTreeEdges] = useState<TreeEdge[]>([]);
+  const [serverMapPositions, setServerMapPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [editingPersonRelatives, setEditingPersonRelatives] = useState<RelativeGroup | null>(null);
   const [highContrast, setHighContrast] = useState(() => {
     try {
@@ -68,6 +72,7 @@ export const App: React.FC = () => {
   const [isTrashModalOpen, setIsTrashModalOpen] = useState(false);
   const [isCreateWorkspaceOpen, setIsCreateWorkspaceOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
+  const [isDataBackupOpen, setIsDataBackupOpen] = useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = useState(false);
 
   // Loading & Error states
@@ -93,6 +98,25 @@ export const App: React.FC = () => {
   const handleToggleHighContrast = () => {
     setHighContrast((prev) => !prev);
   };
+
+  // Re-fetch overview edges and map layout whenever map view is opened
+  useEffect(() => {
+    if (currentWorkspace && activeTab === 'map') {
+      api.tree
+        .getOverview(currentWorkspace.id)
+        .then((overview) => {
+          setTreeEdges(overview.edges);
+        })
+        .catch(() => {});
+
+      api.workspaces
+        .getMapLayout(currentWorkspace.id)
+        .then((layout) => {
+          setServerMapPositions(layout.positions || {});
+        })
+        .catch(() => {});
+    }
+  }, [currentWorkspace, activeTab]);
 
   // Fetch focus neighborhood for a person
   const loadFocusNeighborhood = useCallback(
@@ -125,8 +149,14 @@ export const App: React.FC = () => {
       setError(null);
 
       try {
-        const people = await api.people.list(workspace.id, { limit: 100 });
+        const [people, overview, mapLayout] = await Promise.all([
+          api.people.list(workspace.id, { limit: 100 }),
+          api.tree.getOverview(workspace.id),
+          api.workspaces.getMapLayout(workspace.id).catch(() => ({ positions: {} })),
+        ]);
         setAllPeople(people);
+        setTreeEdges(overview.edges);
+        setServerMapPositions(mapLayout.positions || {});
         if (people.length > 0) {
           await loadFocusNeighborhood(workspace.id, people[0].id);
         }
@@ -143,8 +173,12 @@ export const App: React.FC = () => {
   const refreshPeopleList = useCallback(async () => {
     if (!currentWorkspace) return;
     try {
-      const people = await api.people.list(currentWorkspace.id, { limit: 100 });
+      const [people, overview] = await Promise.all([
+        api.people.list(currentWorkspace.id, { limit: 100 }),
+        api.tree.getOverview(currentWorkspace.id),
+      ]);
       setAllPeople(people);
+      setTreeEdges(overview.edges);
     } catch {
       // Ignore background refresh errors
     }
@@ -187,6 +221,7 @@ export const App: React.FC = () => {
       setCurrentWorkspace(null);
       setFocusNeighborhood(null);
       setAllPeople([]);
+      setTreeEdges([]);
     } finally {
       setLoading(false);
     }
@@ -214,6 +249,7 @@ export const App: React.FC = () => {
     setCurrentWorkspace(null);
     setFocusNeighborhood(null);
     setAllPeople([]);
+    setTreeEdges([]);
   };
 
   // Auth callbacks
@@ -349,6 +385,26 @@ export const App: React.FC = () => {
     }
   };
 
+  // Handle data import success from backup modal
+  const handleImportSuccess = async () => {
+    if (!currentWorkspace) return;
+    try {
+      const [people, overview] = await Promise.all([
+        api.people.list(currentWorkspace.id, { limit: 100 }),
+        api.tree.getOverview(currentWorkspace.id),
+      ]);
+      setAllPeople(people);
+      setTreeEdges(overview.edges);
+      if (focusNeighborhood) {
+        await loadFocusNeighborhood(currentWorkspace.id, focusNeighborhood.focus_person.id);
+      } else if (people.length > 0) {
+        await loadFocusNeighborhood(currentWorkspace.id, people[0].id);
+      }
+    } catch {
+      // Ignore background refresh errors
+    }
+  };
+
   // Create new workspace handler
   const handleCreateWorkspace = async (name: string, description?: string) => {
     const newWs = await api.workspaces.create({ name, description });
@@ -393,6 +449,32 @@ export const App: React.FC = () => {
       if (err instanceof Error) setError(err.message);
     } finally {
       setTreeLoading(false);
+    }
+  };
+
+  // Save custom map layout positions
+  const handleSaveMapPositions = async (positions: Record<string, { x: number; y: number }>) => {
+    if (!currentWorkspace) return;
+    try {
+      await api.workspaces.updateMapLayout(currentWorkspace.id, positions);
+      setServerMapPositions(positions);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      }
+    }
+  };
+
+  // Reset custom map layout positions to auto-layout
+  const handleResetMapPositions = async () => {
+    if (!currentWorkspace) return;
+    try {
+      await api.workspaces.resetMapLayout(currentWorkspace.id);
+      setServerMapPositions({});
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      }
     }
   };
 
@@ -514,7 +596,7 @@ export const App: React.FC = () => {
 
             {/* Right Hero Column: Auth Form */}
             <div className="lg:col-span-5 flex justify-center">
-              <LoginForm onOtpRequested={handleOtpRequested} />
+              <LoginForm onOtpRequested={handleOtpRequested} onLoginSuccess={loadUserData} />
             </div>
           </div>
 
@@ -673,6 +755,7 @@ export const App: React.FC = () => {
         onSelectWorkspace={initWorkspaceTree}
         onCreateWorkspace={() => setIsCreateWorkspaceOpen(true)}
         onOpenMembers={() => setIsMembersOpen(true)}
+        onOpenDataBackup={() => setIsDataBackupOpen(true)}
         onOpenSuperAdmin={() => setIsSuperAdminOpen(true)}
         onLogout={handleLogout}
         highContrast={highContrast}
@@ -770,12 +853,18 @@ export const App: React.FC = () => {
         {currentWorkspace && activeTab === 'map' && (
           <BirdseyeMapCanvas
             people={allPeople}
+            edges={treeEdges}
             focusPersonId={focusNeighborhood?.focus_person.id}
+            workspaceId={currentWorkspace.id}
+            serverPositions={serverMapPositions}
+            canEdit={!isViewer}
             onSelectPerson={(id) => {
               handleSelectPerson(id);
               setActiveTab('focus');
             }}
             onEditPerson={!isViewer ? (p) => handleOpenEditPerson(p as PersonSummary) : undefined}
+            onSavePositions={!isViewer ? handleSaveMapPositions : undefined}
+            onResetPositions={!isViewer ? handleResetMapPositions : undefined}
           />
         )}
 
@@ -898,6 +987,17 @@ export const App: React.FC = () => {
           workspaceId={currentWorkspace.id}
           workspaceName={currentWorkspace.name}
           currentUserId={currentUser?.id}
+        />
+      )}
+
+      {/* Data Export and Import Backup Modal */}
+      {currentWorkspace && (
+        <DataBackupModal
+          isOpen={isDataBackupOpen}
+          onClose={() => setIsDataBackupOpen(false)}
+          workspaceId={currentWorkspace.id}
+          workspaceName={currentWorkspace.name}
+          onImportSuccess={handleImportSuccess}
         />
       )}
 

@@ -14,6 +14,13 @@ services:
       - JWT_SECRET=${JWT_SECRET:-lores-production-secret-key-change-in-prod-32bytes}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-43200}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,http://localhost:${APP_PORT:-8156}}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL:-noreply@lores.family}
+      - EMAILS_FROM_NAME=${EMAILS_FROM_NAME:-Lores Family Tree}
+      - SMTP_TLS=${SMTP_TLS:-true}
     volumes:
       - lores_data:/app/data
 

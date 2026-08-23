@@ -9,6 +9,7 @@ import type {
   PersonRead,
   PersonSummary,
   PersonUpdate,
+  TreeOverviewResponse,
 } from './types/api';
 import { Header } from './components/layout/Header';
 import { BreadcrumbBar, type BreadcrumbItem } from './components/layout/BreadcrumbBar';
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   const [focusNeighborhood, setFocusNeighborhood] = useState<FocusNeighborhoodResponse | null>(null);
   const [focusHistory, setFocusHistory] = useState<BreadcrumbItem[]>([]);
   const [allPeople, setAllPeople] = useState<PersonRead[]>([]);
+  const [treeOverview, setTreeOverview] = useState<TreeOverviewResponse | null>(null);
   const [highContrast, setHighContrast] = useState(() => {
     try {
       return localStorage.getItem('lores_theme_high_contrast') === 'true';
@@ -121,8 +123,14 @@ export const App: React.FC = () => {
       setError(null);
 
       try {
-        const people = await api.people.list(workspace.id, { limit: 100 });
+        const [people, overview] = await Promise.all([
+          api.people.list(workspace.id, { limit: 100 }),
+          api.tree.getOverview(workspace.id).catch(() => null),
+        ]);
         setAllPeople(people);
+        if (overview) {
+          setTreeOverview(overview);
+        }
         if (people.length > 0) {
           await loadFocusNeighborhood(workspace.id, people[0].id, true);
         }
@@ -135,12 +143,18 @@ export const App: React.FC = () => {
     [loadFocusNeighborhood]
   );
 
-  // Refresh people list
+  // Refresh people list and overview edges
   const refreshPeopleList = useCallback(async () => {
     if (!currentWorkspace) return;
     try {
-      const people = await api.people.list(currentWorkspace.id, { limit: 100 });
+      const [people, overview] = await Promise.all([
+        api.people.list(currentWorkspace.id, { limit: 100 }),
+        api.tree.getOverview(currentWorkspace.id).catch(() => null),
+      ]);
       setAllPeople(people);
+      if (overview) {
+        setTreeOverview(overview);
+      }
     } catch {
       // Ignore background refresh errors
     }
@@ -184,6 +198,7 @@ export const App: React.FC = () => {
       setFocusNeighborhood(null);
       setFocusHistory([]);
       setAllPeople([]);
+      setTreeOverview(null);
     } finally {
       setLoading(false);
     }
@@ -518,7 +533,8 @@ export const App: React.FC = () => {
         {/* View Mode: Bird's-Eye Map */}
         {!treeLoading && activeTab === 'map' && (
           <BirdseyeMapCanvas
-            people={allPeople.length > 0 ? allPeople : focusNeighborhood ? [focusNeighborhood.focus_person, ...focusNeighborhood.parents, ...focusNeighborhood.partners, ...focusNeighborhood.children, ...focusNeighborhood.siblings] : []}
+            people={treeOverview?.people || allPeople}
+            edges={treeOverview?.edges || []}
             focusPersonId={focusNeighborhood?.focus_person.id}
             onSelectPerson={handleSelectPerson}
           />

@@ -14,6 +14,7 @@ import type {
   TokenResponse,
   TrashItemRead,
   TrashPurgeResponse,
+  TreeOverviewResponse,
   UserRead,
   UserWorkspaceMembership,
   WorkspaceCreate,
@@ -165,6 +166,9 @@ export const api = {
   tree: {
     getFocusNeighborhood: (workspaceId: string, personId: string): Promise<FocusNeighborhoodResponse> =>
       request<FocusNeighborhoodResponse>(`/workspaces/${workspaceId}/tree/focus/${personId}`),
+
+    getOverview: (workspaceId: string): Promise<TreeOverviewResponse> =>
+      request<TreeOverviewResponse>(`/workspaces/${workspaceId}/tree/overview`),
 
     addRelative: (workspaceId: string, data: AddRelativeRequest): Promise<PersonRead> =>
       request<PersonRead>(`/workspaces/${workspaceId}/tree/add-relative`, {

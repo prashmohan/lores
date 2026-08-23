@@ -146,6 +146,18 @@ export interface AddRelativeRequest {
   person_data?: PersonCreate;
 }
 
+export interface TreeEdge {
+  id: string;
+  source_id: string;
+  target_id: string;
+  edge_type: 'partner' | 'parent_child' | string;
+}
+
+export interface TreeOverviewResponse {
+  people: PersonSummary[];
+  edges: TreeEdge[];
+}
+
 export interface LoreNoteCreate {
   person_id?: string | null;
   title: string;

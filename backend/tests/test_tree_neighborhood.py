@@ -5,8 +5,8 @@ import pytest
 from app.models.child import ChildRelationship
 from app.models.person import Person
 from app.models.union import FamilyUnion
-from app.schemas.tree import FocusNeighborhoodResponse, PersonSummary
-from app.services.tree_service import get_focus_neighborhood, serialize_person
+from app.schemas.tree import FocusNeighborhoodResponse, PersonSummary, TreeOverviewResponse
+from app.services.tree_service import get_focus_neighborhood, get_tree_overview, serialize_person
 
 
 def test_focus_neighborhood_resolves_all_relatives_and_masks_living(db_session):
@@ -291,3 +291,65 @@ def test_serialize_person_custom_fields():
     summary = PersonSummary.model_validate(data_viewer)
     assert summary.first_name == "Jane"
     assert summary.birth_date is None
+
+
+def test_get_tree_overview_with_distinct_partner_and_parent_child_edges(db_session):
+    workspace_id = uuid.uuid4()
+
+    # 3 generations:
+    # Gen 1: Grandfather & Grandmother (partners)
+    gf = Person(workspace_id=workspace_id, first_name="Grandpa", last_name="Miller")
+    gm = Person(workspace_id=workspace_id, first_name="Grandma", last_name="Miller")
+    db_session.add_all([gf, gm])
+    db_session.flush()
+
+    g_union = FamilyUnion(workspace_id=workspace_id, partner1_id=gf.id, partner2_id=gm.id)
+    db_session.add(g_union)
+    db_session.flush()
+
+    # Gen 2: Father (child of g_union) & Mother (partner)
+    father = Person(workspace_id=workspace_id, first_name="Father", last_name="Miller")
+    mother = Person(workspace_id=workspace_id, first_name="Mother", last_name="Miller")
+    db_session.add_all([father, mother])
+    db_session.flush()
+
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=g_union.id, child_id=father.id)
+    )
+
+    p_union = FamilyUnion(workspace_id=workspace_id, partner1_id=father.id, partner2_id=mother.id)
+    db_session.add(p_union)
+    db_session.flush()
+
+    # Gen 3: Child (child of p_union)
+    child = Person(workspace_id=workspace_id, first_name="Child", last_name="Miller")
+    db_session.add(child)
+    db_session.flush()
+
+    db_session.add(
+        ChildRelationship(workspace_id=workspace_id, union_id=p_union.id, child_id=child.id)
+    )
+    db_session.commit()
+
+    overview = get_tree_overview(db_session, workspace_id, viewer_role="collaborator")
+    validated = TreeOverviewResponse.model_validate(overview)
+
+    assert len(validated.people) == 5
+    # Edges:
+    # 1. Partner edge between gf and gm
+    # 2. Partner edge between father and mother
+    # 3. Parent-child edge gf -> father
+    # 4. Parent-child edge gm -> father
+    # 5. Parent-child edge father -> child
+    # 6. Parent-child edge mother -> child
+    # ZERO edges between gf and child (great-grandfather to grandchild)
+    partner_edges = [e for e in validated.edges if e.edge_type == "partner"]
+    pc_edges = [e for e in validated.edges if e.edge_type == "parent_child"]
+
+    assert len(partner_edges) == 2
+    assert len(pc_edges) == 4
+
+    # Verify no edge connects gf directly to child
+    for e in validated.edges:
+        assert not (e.source_id == str(gf.id) and e.target_id == str(child.id))
+        assert not (e.source_id == str(child.id) and e.target_id == str(gf.id))

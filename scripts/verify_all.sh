@@ -30,14 +30,14 @@ fi
 echo ""
 echo "=== 1. Running Backend Pytest Suite with Coverage ==="
 cd "${REPO_ROOT}/backend"
-"${PYTEST}" -v --cov=app --cov-report=term-missing
+"${PYTEST}" -q --cov=app --cov-report=term-missing:skip-covered
 echo "✓ Pytest passed (100% passing tests with coverage)"
 
 echo ""
 echo "=== 2. Running Ruff Linter & Formatting Checks ==="
 cd "${REPO_ROOT}/backend"
-"${RUFF}" check .
-"${RUFF}" format --check .
+"${RUFF}" check -q .
+"${RUFF}" format --check -q .
 echo "✓ Ruff linter and formatting checks passed"
 
 echo ""
@@ -67,10 +67,11 @@ echo "✓ Vitest frontend component and accessibility tests passed"
 echo ""
 echo "=== 7. Running Playwright E2E Accessibility Audits ==="
 cd "${REPO_ROOT}/frontend"
-npm run test:e2e:a11y
+npm run test:e2e:a11y -- --reporter=line
 echo "✓ Playwright E2E accessibility audits passed"
 
 echo ""
 echo "=================================================="
 echo " 🎉 All Quality Gates Passed Successfully! (7/7) "
 echo "=================================================="
+

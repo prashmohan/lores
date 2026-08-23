@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --reporter=basic",
     "test:watch": "vitest",
     "test:a11y": "vitest run tests/a11y-components.test.tsx",
     "test:e2e": "playwright test",

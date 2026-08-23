@@ -124,4 +124,36 @@ describe('BirdseyeMapCanvas', () => {
     expect(screen.getByText(/No Family Records Yet/i)).toBeInTheDocument();
     expect(screen.getByText(/Add family members in the Focus View/i)).toBeInTheDocument();
   });
+
+  it('renders partner and parent-child edges with distinct colors and legend', () => {
+    const mockEdges = [
+      { id: 'e1', source_id: '1', target_id: '2', edge_type: 'partner' },
+      { id: 'e2', source_id: '1', target_id: '3', edge_type: 'parent_child' },
+      { id: 'e3', source_id: '2', target_id: '3', edge_type: 'parent_child' },
+    ];
+
+    const { container } = render(
+      <BirdseyeMapCanvas
+        people={mockPeople}
+        edges={mockEdges}
+        focusPersonId="3"
+      />
+    );
+
+    // Legend is present
+    expect(screen.getByText('Partner')).toBeInTheDocument();
+    expect(screen.getByText('Parent → Child')).toBeInTheDocument();
+
+    // Check SVG paths
+    const paths = container.querySelectorAll('svg g g path');
+    expect(paths.length).toBeGreaterThan(0);
+
+    // Check stroke colors
+    const partnerStroke = Array.from(paths).some((p) => p.getAttribute('stroke') === '#f43f5e');
+    const pcStroke = Array.from(paths).some((p) => p.getAttribute('stroke') === '#3b82f6');
+
+    expect(partnerStroke).toBe(true);
+    expect(pcStroke).toBe(true);
+  });
 });
+

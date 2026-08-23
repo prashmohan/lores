@@ -166,3 +166,96 @@ def get_focus_neighborhood(
         "children": children,
         "siblings": siblings,
     }
+
+
+def get_tree_overview(
+    db: Session,
+    workspace_id: uuid.UUID,
+    viewer_role: str = "collaborator",
+) -> dict[str, Any]:
+    # 1. Fetch all active people in workspace
+    people_stmt = (
+        select(Person)
+        .where(
+            Person.workspace_id == workspace_id,
+            Person.is_deleted.is_(False),
+        )
+        .order_by(Person.birth_date.asc().nulls_last(), Person.first_name.asc())
+    )
+    people = list(db.scalars(people_stmt).all())
+    serialized_people = [serialize_person(p, viewer_role) for p in people]
+    person_ids = {p.id for p in people}
+
+    # 2. Fetch all active unions
+    unions_stmt = select(FamilyUnion).where(
+        FamilyUnion.workspace_id == workspace_id,
+        FamilyUnion.is_deleted.is_(False),
+    )
+    unions = list(db.scalars(unions_stmt).all())
+
+    # 3. Fetch all active child relationships
+    children_stmt = select(ChildRelationship).where(
+        ChildRelationship.workspace_id == workspace_id,
+        ChildRelationship.is_deleted.is_(False),
+    )
+    children = list(db.scalars(children_stmt).all())
+
+    edges: list[dict[str, Any]] = []
+    seen_partner_edges: set[tuple[uuid.UUID, uuid.UUID]] = set()
+
+    union_map = {u.id: u for u in unions}
+
+    # Generate partner edges (between distinct partners in the same union)
+    for u in unions:
+        if (
+            u.partner1_id
+            and u.partner2_id
+            and u.partner1_id != u.partner2_id
+            and u.partner1_id in person_ids
+            and u.partner2_id in person_ids
+        ):
+            pair = (
+                min(u.partner1_id, u.partner2_id),
+                max(u.partner1_id, u.partner2_id),
+            )
+            if pair not in seen_partner_edges:
+                seen_partner_edges.add(pair)
+                edges.append(
+                    {
+                        "id": f"partner-{pair[0]}-{pair[1]}",
+                        "source_id": str(pair[0]),
+                        "target_id": str(pair[1]),
+                        "edge_type": "partner",
+                    }
+                )
+
+    # Generate parent-child edges (from each parent in union to the child)
+    seen_pc_edges: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    for c in children:
+        if c.child_id not in person_ids:
+            continue
+        union = union_map.get(c.union_id)
+        if not union:
+            continue
+        parents_to_link = [
+            p_id
+            for p_id in [union.partner1_id, union.partner2_id]
+            if p_id and p_id in person_ids and p_id != c.child_id
+        ]
+        for parent_id in parents_to_link:
+            pc_pair = (parent_id, c.child_id)
+            if pc_pair not in seen_pc_edges:
+                seen_pc_edges.add(pc_pair)
+                edges.append(
+                    {
+                        "id": f"pc-{parent_id}-{c.child_id}",
+                        "source_id": str(parent_id),
+                        "target_id": str(c.child_id),
+                        "edge_type": "parent_child",
+                    }
+                )
+
+    return {
+        "people": serialized_people,
+        "edges": edges,
+    }

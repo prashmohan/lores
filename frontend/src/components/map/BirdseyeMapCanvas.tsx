@@ -1,11 +1,14 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, User, Sparkles } from 'lucide-react';
-import type { PersonRead, PersonSummary } from '../../types/api';
+import type { PersonRead, PersonSummary, TreeEdge } from '../../types/api';
 
 export type MapPerson = PersonRead | PersonSummary;
 
+const EMPTY_EDGES: TreeEdge[] = [];
+
 interface BirdseyeMapCanvasProps {
   people: MapPerson[];
+  edges?: TreeEdge[];
   focusPersonId?: string | null;
   onSelectPerson?: (personId: string) => void;
 }
@@ -19,8 +22,19 @@ interface PositionedNode {
   tier: number;
 }
 
+interface RenderedEdge {
+  id: string;
+  type: 'partner' | 'parent_child';
+  pathData: string;
+  sourceNode: PositionedNode;
+  targetNode: PositionedNode;
+  midX?: number;
+  midY?: number;
+}
+
 export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   people,
+  edges = EMPTY_EDGES,
   focusPersonId,
   onSelectPerson,
 }) => {
@@ -29,6 +43,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const centeredPersonIdRef = useRef<string | null>(null);
 
   // Parse approximate birth year from string (e.g. "1942", "circa 1940", "12 Apr 1968")
   const parseYear = (dateStr?: string | null): number | null => {
@@ -38,104 +53,232 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   };
 
   // Node dimensions
-  const NODE_WIDTH = 200;
+  const NODE_WIDTH = 210;
   const NODE_HEIGHT = 90;
-  const HORIZONTAL_GAP = 50;
-  const VERTICAL_GAP = 120;
+  const HORIZONTAL_GAP = 55;
+  const VERTICAL_GAP = 140;
 
-  // Calculate layout: organize people into generational tiers based on birth year
+  // Calculate layout: topological generational tiers + partner alignment
   const { nodes, connections, bounds } = useMemo(() => {
     if (people.length === 0) {
       return {
         nodes: [] as PositionedNode[],
-        connections: [] as { from: PositionedNode; to: PositionedNode }[],
+        connections: [] as RenderedEdge[],
         bounds: { minX: 0, minY: 0, maxX: 800, maxY: 600, width: 800, height: 600 },
       };
     }
 
-    // Sort people by parsed birth year (earliest first), unknown birth years last
-    const sorted = [...people].sort((a, b) => {
-      const yearA = parseYear(a.birth_date);
-      const yearB = parseYear(b.birth_date);
-      if (yearA !== null && yearB !== null) return yearA - yearB;
-      if (yearA !== null) return -1;
-      if (yearB !== null) return 1;
-      return a.first_name.localeCompare(b.first_name);
+    // 1. Build adjacency maps
+    const childToParents = new Map<string, string[]>();
+    const parentToChildren = new Map<string, string[]>();
+    const partnerMap = new Map<string, Set<string>>();
+
+    people.forEach((p) => {
+      childToParents.set(p.id, []);
+      parentToChildren.set(p.id, []);
+      partnerMap.set(p.id, new Set());
     });
 
-    // Group into 4 generational tiers or rows
-    const tiers: MapPerson[][] = [[], [], [], []];
-    
-    // Determine min and max years
-    const years = sorted.map((p) => parseYear(p.birth_date)).filter((y): y is number => y !== null);
-    if (years.length >= 2) {
-      const minYear = years[0];
-      const maxYear = years[years.length - 1];
-      const span = Math.max(1, maxYear - minYear);
-      const tierStep = span / 4;
+    edges.forEach((e) => {
+      if (e.edge_type === 'partner') {
+        partnerMap.get(e.source_id)?.add(e.target_id);
+        partnerMap.get(e.target_id)?.add(e.source_id);
+      } else if (e.edge_type === 'parent_child') {
+        childToParents.get(e.target_id)?.push(e.source_id);
+        parentToChildren.get(e.source_id)?.push(e.target_id);
+      }
+    });
 
-      sorted.forEach((p) => {
-        const y = parseYear(p.birth_date);
-        if (y === null) {
-          tiers[2].push(p); // Default unknown to middle tier
-        } else {
-          const tierIdx = Math.min(3, Math.floor((y - minYear) / Math.max(1, tierStep)));
-          tiers[tierIdx].push(p);
+    // 2. Compute generational depths using DAG relaxation
+    const depths = new Map<string, number>();
+    people.forEach((p) => depths.set(p.id, 0));
+
+    // Multiple passes to settle depths across parent-child links and partner pairs
+    for (let pass = 0; pass < people.length + 5; pass++) {
+      let changed = false;
+
+      // Rule A: Parent-child pushes child to at least parent.depth + 1
+      edges.forEach((e) => {
+        if (e.edge_type === 'parent_child') {
+          const parentDepth = depths.get(e.source_id) ?? 0;
+          const currentChildDepth = depths.get(e.target_id) ?? 0;
+          if (currentChildDepth < parentDepth + 1) {
+            depths.set(e.target_id, parentDepth + 1);
+            changed = true;
+          }
         }
       });
-    } else {
-      // If few/no dates, split evenly across tiers (max 4 per tier)
-      const perTier = Math.max(1, Math.ceil(sorted.length / 3));
-      sorted.forEach((p, idx) => {
-        const tierIdx = Math.min(3, Math.floor(idx / perTier));
-        tiers[tierIdx].push(p);
+
+      // Rule B: Partners share the same generational depth (max of both)
+      edges.forEach((e) => {
+        if (e.edge_type === 'partner') {
+          const depth1 = depths.get(e.source_id) ?? 0;
+          const depth2 = depths.get(e.target_id) ?? 0;
+          const maxDepth = Math.max(depth1, depth2);
+          if (depth1 !== maxDepth) {
+            depths.set(e.source_id, maxDepth);
+            changed = true;
+          }
+          if (depth2 !== maxDepth) {
+            depths.set(e.target_id, maxDepth);
+            changed = true;
+          }
+        }
       });
+
+      if (!changed) break;
     }
 
-    // Filter out empty tiers while keeping index
-    const activeTiers = tiers.map((tierPeople, tierIdx) => ({
-      tierIdx,
-      people: tierPeople,
-    })).filter((t) => t.people.length > 0);
+    // 3. Fallback for disconnected nodes without parents/children: group by birth years
+    const hasEdges = edges.length > 0;
+    if (!hasEdges) {
+      const sorted = [...people].sort((a, b) => {
+        const yA = parseYear(a.birth_date);
+        const yB = parseYear(b.birth_date);
+        if (yA !== null && yB !== null) return yA - yB;
+        if (yA !== null) return -1;
+        if (yB !== null) return 1;
+        return a.first_name.localeCompare(b.first_name);
+      });
+      const years = sorted.map((p) => parseYear(p.birth_date)).filter((y): y is number => y !== null);
+      if (years.length >= 2) {
+        const minYear = years[0];
+        const maxYear = years[years.length - 1];
+        const span = Math.max(1, maxYear - minYear);
+        const tierStep = span / 3;
+        sorted.forEach((p) => {
+          const y = parseYear(p.birth_date);
+          const tierIdx = y === null ? 1 : Math.min(2, Math.floor((y - minYear) / Math.max(1, tierStep)));
+          depths.set(p.id, tierIdx);
+        });
+      }
+    }
 
+    // 4. Group people into tiers by depth
+    const tierMap = new Map<number, MapPerson[]>();
+    people.forEach((p) => {
+      const d = depths.get(p.id) ?? 0;
+      if (!tierMap.has(d)) tierMap.set(d, []);
+      tierMap.get(d)!.push(p);
+    });
+
+    const sortedTiers = Array.from(tierMap.keys()).sort((a, b) => a - b);
+
+    // 5. Within each tier, cluster partners together
     const calculatedNodes: PositionedNode[] = [];
-    const maxNodesInTier = Math.max(...activeTiers.map((t) => t.people.length), 1);
-    const canvasCenterX = (maxNodesInTier * (NODE_WIDTH + HORIZONTAL_GAP)) / 2 + 100;
+    const nodeMap = new Map<string, PositionedNode>();
 
-    activeTiers.forEach(({ tierIdx }, visualRowIdx) => {
-      const tierPeople = tiers[tierIdx];
-      const rowWidth = tierPeople.length * NODE_WIDTH + (tierPeople.length - 1) * HORIZONTAL_GAP;
+    const maxNodesInAnyTier = Math.max(...Array.from(tierMap.values()).map((list) => list.length), 1);
+    const canvasCenterX = (maxNodesInAnyTier * (NODE_WIDTH + HORIZONTAL_GAP)) / 2 + 100;
+
+    sortedTiers.forEach((tierLevel, visualRowIdx) => {
+      const tierPeople = tierMap.get(tierLevel) || [];
+
+      // Sort tierPeople so partners sit side-by-side
+      const visitedInTier = new Set<string>();
+      const orderedTierPeople: MapPerson[] = [];
+
+      tierPeople.forEach((p) => {
+        if (visitedInTier.has(p.id)) return;
+        visitedInTier.add(p.id);
+        orderedTierPeople.push(p);
+
+        // Append partner immediately after
+        const pPartners = partnerMap.get(p.id);
+        if (pPartners) {
+          pPartners.forEach((partnerId) => {
+            if (!visitedInTier.has(partnerId)) {
+              const partnerObj = tierPeople.find((tp) => tp.id === partnerId);
+              if (partnerObj) {
+                visitedInTier.add(partnerId);
+                orderedTierPeople.push(partnerObj);
+              }
+            }
+          });
+        }
+      });
+
+      const rowWidth = orderedTierPeople.length * NODE_WIDTH + (orderedTierPeople.length - 1) * HORIZONTAL_GAP;
       const startX = canvasCenterX - rowWidth / 2;
-      const y = 80 + visualRowIdx * (NODE_HEIGHT + VERTICAL_GAP);
+      const y = 90 + visualRowIdx * (NODE_HEIGHT + VERTICAL_GAP);
 
-      tierPeople.forEach((p, colIdx) => {
+      orderedTierPeople.forEach((p, colIdx) => {
         const x = startX + colIdx * (NODE_WIDTH + HORIZONTAL_GAP);
-        calculatedNodes.push({
+        const node: PositionedNode = {
           person: p,
           x,
           y,
           width: NODE_WIDTH,
           height: NODE_HEIGHT,
-          tier: tierIdx,
-        });
+          tier: tierLevel,
+        };
+        calculatedNodes.push(node);
+        nodeMap.set(p.id, node);
       });
     });
 
-    // Create visual connector lines between successive tiers
-    const conns: { from: PositionedNode; to: PositionedNode }[] = [];
-    for (let i = 0; i < calculatedNodes.length; i++) {
-      for (let j = i + 1; j < calculatedNodes.length; j++) {
-        const nodeA = calculatedNodes[i];
-        const nodeB = calculatedNodes[j];
-        if (nodeB.y > nodeA.y && nodeB.y - nodeA.y <= NODE_HEIGHT + VERTICAL_GAP + 10) {
-          if (Math.abs(nodeA.x - nodeB.x) < NODE_WIDTH * 1.5) {
-            conns.push({ from: nodeA, to: nodeB });
-          }
-        }
-      }
-    }
+    // 6. Generate EXACT rendered edges (No dummy / proximity edges!)
+    const renderedConns: RenderedEdge[] = [];
 
-    // Calculate bounding box
+    edges.forEach((e) => {
+      const sourceNode = nodeMap.get(e.source_id);
+      const targetNode = nodeMap.get(e.target_id);
+
+      if (!sourceNode || !targetNode) return;
+
+      if (e.edge_type === 'partner') {
+        const isSourceLeft = sourceNode.x < targetNode.x;
+        const leftNode = isSourceLeft ? sourceNode : targetNode;
+        const rightNode = isSourceLeft ? targetNode : sourceNode;
+
+        const startX = leftNode.x + leftNode.width;
+        const startY = leftNode.y + leftNode.height / 2;
+        const endX = rightNode.x;
+        const endY = rightNode.y + rightNode.height / 2;
+
+        if (Math.abs(leftNode.y - rightNode.y) < 10) {
+          const midX = (startX + endX) / 2;
+          const midY = startY;
+          renderedConns.push({
+            id: e.id,
+            type: 'partner',
+            pathData: `M ${startX} ${startY} L ${endX} ${endY}`,
+            sourceNode,
+            targetNode,
+            midX,
+            midY,
+          });
+        } else {
+          const midX = (startX + endX) / 2;
+          const midY = (startY + endY) / 2;
+          renderedConns.push({
+            id: e.id,
+            type: 'partner',
+            pathData: `M ${startX} ${startY} C ${startX + 30} ${startY}, ${endX - 30} ${endY}, ${endX} ${endY}`,
+            sourceNode,
+            targetNode,
+            midX,
+            midY,
+          });
+        }
+      } else if (e.edge_type === 'parent_child') {
+        const startX = sourceNode.x + sourceNode.width / 2;
+        const startY = sourceNode.y + sourceNode.height;
+        const endX = targetNode.x + targetNode.width / 2;
+        const endY = targetNode.y;
+        const midY = (startY + endY) / 2;
+
+        renderedConns.push({
+          id: e.id,
+          type: 'parent_child',
+          pathData: `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`,
+          sourceNode,
+          targetNode,
+        });
+      }
+    });
+
+    // 7. Calculate bounding box
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -157,7 +300,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
 
     return {
       nodes: calculatedNodes,
-      connections: conns,
+      connections: renderedConns,
       bounds: {
         minX: minX - 100,
         minY: minY - 50,
@@ -167,13 +310,14 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
         height: Math.max(600, maxY - minY + 150),
       },
     };
-  }, [people]);
+  }, [people, edges]);
 
   // Center on focus person if specified
   useEffect(() => {
-    if (focusPersonId && nodes.length > 0) {
+    if (focusPersonId && focusPersonId !== centeredPersonIdRef.current && nodes.length > 0) {
       const target = nodes.find((n) => n.person.id === focusPersonId);
       if (target) {
+        centeredPersonIdRef.current = focusPersonId;
         setPan({
           x: 400 - (target.x + target.width / 2),
           y: 250 - (target.y + target.height / 2),
@@ -218,17 +362,29 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
       aria-label="Family Tree Overview Map"
       className="relative w-full h-[650px] bg-slate-100 rounded-3xl border-2 border-slate-300 overflow-hidden select-none flex flex-col shadow-inner"
     >
-      {/* Top Controls Bar */}
+      {/* Top Controls & Legend Bar */}
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-600" />
-          <span className="font-bold text-slate-800 text-sm">
-            Overview Map ({people.length} {people.length === 1 ? 'member' : 'members'})
-          </span>
-          <span className="text-xs text-slate-500 hidden sm:inline">| Drag to pan, scroll/click to zoom</span>
+        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <span className="font-bold text-slate-800 text-sm">
+              Overview Map ({people.length} {people.length === 1 ? 'member' : 'members'})
+            </span>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3 text-xs font-bold pl-2 border-l border-slate-200">
+            <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+              <span className="w-3 h-0.5 bg-rose-500 rounded inline-block" />
+              <span>Partner</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+              <span className="w-3 h-0.5 bg-blue-500 rounded inline-block" />
+              <span>Parent → Child</span>
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md p-1.5 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto">
+        <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto">
           <button
             type="button"
             onClick={handleZoomIn}
@@ -295,23 +451,41 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
               fill="url(#dot-grid)"
             />
 
-            {/* Connecting Lines */}
-            {connections.map((conn, idx) => {
-              const startX = conn.from.x + conn.from.width / 2;
-              const startY = conn.from.y + conn.from.height;
-              const endX = conn.to.x + conn.to.width / 2;
-              const endY = conn.to.y;
-              const midY = (startY + endY) / 2;
+            {/* Connecting Lines with Distinct Styles and Colors */}
+            {connections.map((conn) => {
+              const isPartner = conn.type === 'partner';
+              const strokeColor = isPartner ? '#f43f5e' : '#3b82f6';
+              const strokeWidth = isPartner ? 3.5 : 2.5;
 
               return (
-                <path
-                  key={`conn-${idx}`}
-                  d={`M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`}
-                  fill="none"
-                  stroke="#cbd5e1"
-                  strokeWidth="2.5"
-                  strokeDasharray="4 4"
-                />
+                <g key={conn.id}>
+                  {/* Outer glow line for high visibility */}
+                  <path
+                    d={conn.pathData}
+                    fill="none"
+                    stroke={isPartner ? '#fecdd3' : '#dbeafe'}
+                    strokeWidth={strokeWidth + 4}
+                    strokeLinecap="round"
+                  />
+                  {/* Main solid line */}
+                  <path
+                    d={conn.pathData}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeLinecap="round"
+                  />
+                  {/* Partner Heart Indicator at midpoint */}
+                  {isPartner && conn.midX !== undefined && conn.midY !== undefined && (
+                    <g transform={`translate(${conn.midX - 10}, ${conn.midY - 10})`}>
+                      <circle cx="10" cy="10" r="10" fill="#fff" stroke="#f43f5e" strokeWidth="2" />
+                      <path
+                        d="M10 14.5l-1.1-1C5 10 2.5 7.8 2.5 5.2 2.5 3 4.2 1.5 6.5 1.5c1.3 0 2.5.6 3.5 1.6 1-1 2.2-1.6 3.5-1.6 2.3 0 4 1.5 4 3.7 0 2.6-2.5 4.8-6.4 8.3l-1.1 1z"
+                        fill="#f43f5e"
+                      />
+                    </g>
+                  )}
+                </g>
               );
             })}
 
@@ -319,7 +493,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             {nodes.map((node) => {
               const isFocus = node.person.id === focusPersonId;
               const fullName = `${node.person.first_name} ${node.person.last_name}`.trim();
-              
+
               let datesLabel = '';
               if (node.person.birth_date && node.person.death_date) {
                 datesLabel = `${node.person.birth_date} – ${node.person.death_date}`;
@@ -395,8 +569,8 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                       isFocus ? 'fill-amber-900' : 'fill-slate-600'
                     }`}
                   >
-                    {node.person.first_name[0]}
-                    {node.person.last_name[0]}
+                    {(node.person.first_name?.[0] || '').toUpperCase()}
+                    {(node.person.last_name?.[0] || '').toUpperCase()}
                   </text>
 
                   {/* Name Text */}
@@ -407,7 +581,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                       isFocus ? 'fill-slate-950 font-black' : 'fill-slate-900'
                     }`}
                   >
-                    {fullName.length > 15 ? `${fullName.slice(0, 14)}…` : fullName}
+                    {fullName.length > 16 ? `${fullName.slice(0, 15)}…` : fullName}
                   </text>
 
                   {/* Life Dates Text */}

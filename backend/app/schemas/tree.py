@@ -45,3 +45,17 @@ class AddRelativeRequest(BaseModel):
     @property
     def person_payload(self) -> PersonCreate | None:
         return self.person or self.person_data
+
+
+class TreeEdge(BaseModel):
+    id: str
+    source_id: str
+    target_id: str
+    edge_type: str  # 'partner' or 'parent_child'
+
+
+class TreeOverviewResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    people: list[PersonSummary]
+    edges: list[TreeEdge]

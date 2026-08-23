@@ -8,10 +8,19 @@ from app.api.deps import get_current_user, get_workspace_role, require_role
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.person import PersonRead
-from app.schemas.tree import AddRelativeRequest, FocusNeighborhoodResponse
+from app.schemas.tree import AddRelativeRequest, FocusNeighborhoodResponse, TreeOverviewResponse
 from app.services import person_service, tree_service
 
 router = APIRouter()
+
+
+@router.get("/overview", response_model=TreeOverviewResponse)
+def get_tree_overview(
+    workspace_id: uuid.UUID,
+    role: str = Depends(get_workspace_role),
+    db: Session = Depends(get_db),
+) -> Any:
+    return tree_service.get_tree_overview(db, workspace_id=workspace_id, viewer_role=role)
 
 
 @router.get("/focus/{person_id}", response_model=FocusNeighborhoodResponse)

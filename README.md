@@ -246,6 +246,8 @@ docker compose up --build -d
 ```
 
 - **Application URL**: Accessible locally at `http://127.0.0.1:8156` (or configured `APP_PORT`).
+- **Cloudflare Tunnel / Reverse Proxy Ready**: The container binds exclusively to `127.0.0.1`, keeping all host WAN ports closed. Point your Cloudflare Tunnel (`cloudflared`) to `http://localhost:8156`.
+- **Hardened Runtime Isolation**: Runs as an unprivileged non-root user (`lores`), drops all Linux kernel capabilities (`cap_drop: ALL`), enforces `no-new-privileges: true`, and mounts root filesystems as read-only.
 - **Data Persistence**: SQLite database records are persisted in the named Docker volume `lores_data`.
 
 To stop containers:

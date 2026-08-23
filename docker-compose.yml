@@ -5,9 +5,13 @@ services:
       dockerfile: Dockerfile
     container_name: lores-backend
     restart: unless-stopped
-    # Security Hardening: drop all kernel capabilities & prevent privilege escalation
+    # Security Hardening: drop kernel capabilities & prevent privilege escalation
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
     security_opt:
       - no-new-privileges:true
     # Read-only root container filesystem (only SQLite volume and /tmp are writable)

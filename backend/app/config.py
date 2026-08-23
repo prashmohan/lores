@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
-    EMAILS_FROM_EMAIL: str = "onboarding@resend.dev"
+    EMAILS_FROM_EMAIL: str = "noreply@lores.family"
     EMAILS_FROM_NAME: str = "Lores Family Tree"
     SMTP_TLS: bool = True
 

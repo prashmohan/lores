@@ -783,7 +783,7 @@ export const App: React.FC = () => {
                 role="tab"
                 aria-selected={activeTab === 'focus'}
                 onClick={() => setActiveTab('focus')}
-                className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                className={`min-h-[44px] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'focus'
                     ? 'bg-amber-500 text-slate-950 shadow-xs ring-1 ring-amber-400'
                     : 'text-slate-700 hover:bg-slate-100'
@@ -798,7 +798,7 @@ export const App: React.FC = () => {
                 role="tab"
                 aria-selected={activeTab === 'map'}
                 onClick={() => setActiveTab('map')}
-                className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                className={`min-h-[44px] px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 cursor-pointer ${
                   activeTab === 'map'
                     ? 'bg-amber-500 text-slate-950 shadow-xs ring-1 ring-amber-400'
                     : 'text-slate-700 hover:bg-slate-100'
@@ -814,7 +814,7 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsActivityModalOpen(true)}
-                className="px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-slate-100 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-slate-100 border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <History className="w-4 h-4 text-slate-600 stroke-[2.5]" />
                 <span>Family Activity</span>
@@ -823,7 +823,7 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsTrashModalOpen(true)}
-                className="px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-rose-50 hover:text-rose-900 border border-slate-200 hover:border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="min-h-[44px] px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-rose-50 hover:text-rose-900 border border-slate-200 hover:border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4 text-rose-600 stroke-[2.5]" />
                 <span>Family Trash</span>

@@ -113,3 +113,12 @@ npm run test:e2e:a11y
 - **Strict Typing**: Maintain full TypeScript types for frontend APIs and strict Pydantic v2 schemas / SQLAlchemy models for backend services. Avoid using `any` in TypeScript or unannotated `def` in Python.
 - **Keep README.md Synchronized**: Whenever system capabilities, API endpoints, UI features, data exchange mechanisms, architecture, or test suites are added, modified, or extended, all agents and human contributors MUST update `README.md`. This includes updating key feature lists, monorepo directory trees, mermaid architecture/data flow diagrams, and test count metrics so that the project documentation always mirrors the true, current state of the codebase.
 
+### 5.4 Mobile & Touch Accessibility Standards (WCAG 2.1 AAA)
+- **Target Size (WCAG 2.5.5 Level AAA & 2.5.8 Level AA)**: Every interactive control (buttons, icon links, form inputs, avatar edit triggers, drawer items) MUST provide a minimum tap target of $\ge 44 \times 44\text{px}$ with adequate perimeter spacing, preventing mis-taps.
+- **Single-Pointer Alternative (WCAG 2.5.1 Level A)**: Any multi-touch or path-based gesture (such as 2-finger pan or pinch-to-zoom) MUST provide simple single-pointer alternatives (e.g., on-screen `+` Zoom In, `-` Zoom Out, and `Reset` buttons).
+- **Pointer Cancellation (WCAG 2.5.2 Level A)**: Touch-down events must never commit irreversible actions. Drag-and-drop operations must provide clear cancellation thresholds (e.g., moving finger $>8\text{px}$ before the 250ms hold expires cancels the drag without side effects).
+- **Orientation & Reflow (WCAG 1.3.4 & 1.4.10 Level AA)**: Viewport orientation must never be locked (fully functional in portrait and landscape). All layouts, navigation bars, and modals must reflow cleanly down to 320px screen width without horizontal scrollbars or text clipping.
+- **Mobile Form Ergonomics & iOS Zoom Prevention**: All form controls (`<input>`, `<select>`, `<textarea>`) MUST enforce a minimum font size of $16\text{px}$ (`text-base`) to eliminate unwanted iOS Safari viewport auto-zooming on focus. Modals on mobile viewports ($<640\text{px}$) should render as accessible bottom sheets with `max-h-[85vh]` and safe-area padding.
+- **Accessible Feedback & Progressive Haptics (WCAG 4.1.3 Level AA)**: Floating guidance hints or status changes must use `role="status"`, `aria-live="polite"`, and `pointer-events-none`. Haptic feedback (`navigator.vibrate`) must be wrapped in progressive enhancement (`navigator.vibrate?.(...)`) and gracefully no-op when unsupported.
+
+

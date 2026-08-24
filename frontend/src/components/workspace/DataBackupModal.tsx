@@ -196,7 +196,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
           aria-describedby="data-backup-description"
         >
           {/* Header */}
@@ -218,7 +218,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close data backup dialog"
               >
                 <X className="w-5 h-5" />
@@ -243,7 +243,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                   setActiveTab('export');
                   setError(null);
                 }}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                className={`flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeTab === 'export'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
@@ -263,7 +263,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                   setActiveTab('import');
                   setError(null);
                 }}
-                className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                className={`flex-1 min-h-[44px] py-2.5 px-4 rounded-xl text-sm font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                   activeTab === 'import'
                     ? 'bg-amber-500 text-slate-950 shadow-sm'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60'
@@ -322,7 +322,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                       type="button"
                       onClick={handleExportGedcom}
                       disabled={exportingFormat !== null}
-                      className="min-h-[42px] px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shrink-0 self-end sm:self-center"
+                      className="min-h-[44px] px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shrink-0 self-end sm:self-center"
                     >
                       {exportingFormat === 'gedcom' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -360,7 +360,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                       type="button"
                       onClick={handleExportJson}
                       disabled={exportingFormat !== null}
-                      className="min-h-[42px] px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shrink-0 self-end sm:self-center"
+                      className="min-h-[44px] px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm rounded-xl shadow-xs transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 shrink-0 self-end sm:self-center"
                     >
                       {exportingFormat === 'json' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -587,7 +587,7 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors cursor-pointer text-sm"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors cursor-pointer text-sm flex items-center justify-center"
             >
               Done
             </button>

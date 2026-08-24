@@ -50,7 +50,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[90vh] overflow-y-auto border-2 border-slate-200 focus:outline-none"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto border-2 border-slate-200 focus:outline-none"
           aria-describedby="create-workspace-description"
         >
           {/* Modal Header */}
@@ -67,7 +67,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close create family dialog"
               >
                 <X className="w-5 h-5" />
@@ -123,14 +123,14 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-5 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
+                className="min-h-[44px] px-5 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                className="min-h-[44px] px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 <span>{loading ? 'Creating...' : 'Create Family Tree'}</span>

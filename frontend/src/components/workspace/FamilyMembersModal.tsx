@@ -219,7 +219,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
           aria-describedby="family-members-description"
         >
           {/* Header */}
@@ -241,7 +241,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close family members dialog"
               >
                 <X className="w-5 h-5" />
@@ -290,7 +290,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g., The Miller Family"
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-medium bg-white"
+                    className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium bg-white"
                   />
                 </div>
 
@@ -304,7 +304,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="e.g., Preserving oral history and lineage across five generations."
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-medium bg-white resize-y"
+                    className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium bg-white resize-y"
                   />
                 </div>
 
@@ -312,12 +312,12 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                   <button
                     type="submit"
                     disabled={metadataLoading || !name.trim()}
-                    className="min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="min-h-[44px] px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm rounded-xl shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     {metadataLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Save className="w-3.5 h-3.5" />
+                      <Save className="w-4 h-4" />
                     )}
                     <span>{metadataLoading ? 'Saving...' : 'Save Tree Details'}</span>
                   </button>
@@ -344,7 +344,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="relative@example.com"
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-medium"
+                    className="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-medium"
                   />
                 </div>
 
@@ -356,7 +356,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                     id="member_role"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as 'collaborator' | 'viewer' | 'admin')}
-                    className="w-full px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-sm text-slate-900 font-bold bg-white"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border-2 border-slate-300 focus:border-amber-500 text-base text-slate-900 font-bold bg-white"
                   >
                     <option value="collaborator">Collaborator</option>
                     <option value="viewer">Viewer</option>
@@ -368,9 +368,9 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                   <button
                     type="submit"
                     disabled={inviteLoading || !inviteEmail.trim()}
-                    className="w-full min-h-[42px] px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs rounded-xl shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
+                    className="w-full min-h-[44px] px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm rounded-xl shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    {inviteLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                    {inviteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                     <span>{inviteLoading ? 'Adding...' : 'Add Member'}</span>
                   </button>
                 </div>
@@ -440,7 +440,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                               aria-label={`Change role for ${member.email || member.display_name}`}
                               value={member.role}
                               onChange={(e) => handleRoleChange(member, e.target.value)}
-                              className="text-xs font-bold px-2 py-1 border border-slate-300 rounded-lg bg-white text-slate-800 cursor-pointer"
+                              className="min-h-[44px] text-base sm:text-xs font-bold px-2 py-1 border border-slate-300 rounded-lg bg-white text-slate-800 cursor-pointer"
                             >
                               <option value="collaborator">Collaborator</option>
                               <option value="viewer">Viewer</option>
@@ -454,7 +454,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
                             type="button"
                             onClick={() => handleRemove(member.user_id, member.email)}
                             disabled={isRemoving}
-                            className="p-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors disabled:opacity-50 cursor-pointer"
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors disabled:opacity-50 cursor-pointer"
                             aria-label={`Remove ${member.email || member.display_name} from family`}
                             title="Remove member"
                           >
@@ -474,7 +474,7 @@ export const FamilyMembersModal: React.FC<FamilyMembersModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors cursor-pointer text-sm"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors cursor-pointer text-sm flex items-center justify-center"
             >
               Done
             </button>

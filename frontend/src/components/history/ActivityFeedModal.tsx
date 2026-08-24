@@ -175,7 +175,7 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] flex flex-col border-2 border-slate-200 focus:outline-none"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] flex flex-col border-2 border-slate-200 focus:outline-none"
           aria-describedby="activity-feed-description"
         >
           {/* Modal Header */}
@@ -200,14 +200,14 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
                 onClick={fetchLogs}
                 disabled={loading}
                 aria-label="Refresh activity logs"
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                   aria-label="Close activity feed"
                 >
                   <X className="w-5 h-5" />
@@ -314,7 +314,7 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors cursor-pointer"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors cursor-pointer flex items-center justify-center text-sm"
             >
               Close
             </button>

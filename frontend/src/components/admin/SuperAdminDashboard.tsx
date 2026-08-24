@@ -66,7 +66,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-5xl bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] flex flex-col border-2 border-slate-200 focus:outline-none"
           aria-describedby="super-admin-description"
         >
           {/* Header */}
@@ -91,14 +91,14 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                 onClick={fetchData}
                 disabled={loading}
                 aria-label="Refresh admin data"
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
               <Dialog.Close asChild>
                 <button
                   type="button"
-                  className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                   aria-label="Close super admin dialog"
                 >
                   <X className="w-5 h-5" />
@@ -226,7 +226,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
                             onSelectWorkspace(ws.id);
                             onClose();
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 font-bold text-xs text-slate-700 transition-colors cursor-pointer"
+                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[44px] rounded-xl bg-slate-100 hover:bg-amber-500 hover:text-slate-950 font-bold text-xs text-slate-700 transition-colors cursor-pointer"
                         >
                           <span>Open Tree</span>
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -244,7 +244,7 @@ export const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors cursor-pointer"
+              className="min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold transition-colors cursor-pointer flex items-center justify-center text-sm"
             >
               Close
             </button>

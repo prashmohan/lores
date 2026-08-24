@@ -73,7 +73,7 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl z-50 border-2 border-slate-200"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl z-50 border-2 border-slate-200 max-h-[90vh] overflow-y-auto"
           aria-describedby="otp-description"
         >
           <div className="text-center mb-6">
@@ -125,7 +125,7 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
             <button
               type="submit"
               disabled={loading || code.length === 0}
-              className="w-full py-4 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-extrabold text-base transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer"
+              className="w-full min-h-[48px] py-3.5 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-extrabold text-base transition-all shadow-md hover:shadow-lg disabled:opacity-50 cursor-pointer flex items-center justify-center"
             >
               {loading ? 'Verifying...' : 'Verify & Continue'}
             </button>
@@ -135,7 +135,7 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
             <button
               type="button"
               onClick={onBack}
-              className="font-bold text-slate-600 hover:text-slate-950 flex items-center gap-1.5 cursor-pointer py-1"
+              className="min-h-[44px] font-bold text-slate-600 hover:text-slate-950 flex items-center gap-1.5 cursor-pointer px-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Change email</span>
@@ -145,7 +145,7 @@ export const VerifyOtpModal: React.FC<VerifyOtpModalProps> = ({
               type="button"
               onClick={handleResend}
               disabled={resending}
-              className="font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 py-1"
+              className="min-h-[44px] font-bold text-amber-700 hover:text-amber-800 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 px-2"
             >
               <RefreshCw className={`w-4 h-4 ${resending ? 'animate-spin' : ''}`} />
               <span>{resending ? 'Sending...' : 'Resend code'}</span>

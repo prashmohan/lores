@@ -212,7 +212,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl z-50 max-h-[95vh] overflow-y-auto border-2 border-slate-200"
+          className="fixed bottom-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl z-50 max-h-[90vh] sm:max-h-[95vh] overflow-y-auto border-2 border-slate-200"
           aria-describedby="photo-crop-description"
         >
           {/* Header */}
@@ -224,7 +224,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
             <Dialog.Close asChild>
               <button
                 type="button"
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
                 aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
@@ -353,7 +353,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                     onClick={handleZoomOut}
                     disabled={zoom <= 1}
                     aria-label="Zoom Out"
-                    className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 transition-colors cursor-pointer"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 transition-colors cursor-pointer"
                   >
                     <ZoomOut className="w-4 h-4" />
                   </button>
@@ -380,17 +380,17 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                     onClick={handleZoomIn}
                     disabled={zoom >= 3}
                     aria-label="Zoom In"
-                    className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 transition-colors cursor-pointer"
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-200 active:bg-slate-300 disabled:opacity-40 transition-colors cursor-pointer"
                   >
                     <ZoomIn className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs font-bold">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs font-bold gap-2">
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Center and Reset</span>
@@ -399,7 +399,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1.5 rounded-lg text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <Upload className="w-3.5 h-3.5 text-amber-700" />
                     <span>Choose Different Photo</span>
@@ -416,7 +416,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 type="button"
                 onClick={handleRemovePhoto}
                 disabled={isSaving}
-                className="px-3 py-2 rounded-xl text-rose-700 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                className="min-h-[44px] px-3.5 py-2 rounded-xl text-rose-700 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Remove Photo</span>
@@ -430,7 +430,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
+                className="min-h-[44px] px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center"
               >
                 Cancel
               </button>
@@ -439,7 +439,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
                   type="button"
                   onClick={handleCropAndSave}
                   disabled={isSaving}
-                  className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  className="min-h-[44px] px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-sm shadow transition-colors disabled:opacity-50 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4 stroke-[3]" />
                   <span>{isSaving ? 'Saving...' : 'Save Photo'}</span>

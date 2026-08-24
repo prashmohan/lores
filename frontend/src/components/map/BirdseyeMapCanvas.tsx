@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, User, Sparkles, Pencil, Eye, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, User, Sparkles, Pencil, Eye, X, Maximize2, Minimize2, Info } from 'lucide-react';
 import type { PersonRead, PersonSummary, TreeEdge } from '../../types/api';
 
 export type MapPerson = PersonRead | PersonSummary;
@@ -56,6 +56,8 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showMobileLegend, setShowMobileLegend] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const centeredPersonIdRef = useRef<string | null>(null);
 
@@ -123,6 +125,19 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
     setCustomPositions(serverPositions || {});
     latestCustomPositionsRef.current = serverPositions || {};
   }, [serverPositions]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
 
   // Parse approximate birth year from string (e.g. "1942", "circa 1940", "12 Apr 1968")
   const parseYear = (dateStr?: string | null): number | null => {
@@ -1315,18 +1330,23 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
     <div
       role="region"
       aria-label="Family Tree Overview Map"
-      className="relative w-full h-[650px] bg-slate-100 rounded-3xl border-2 border-slate-300 overflow-hidden select-none flex flex-col shadow-inner"
+      className={`relative w-full ${
+        isFullscreen
+          ? 'fixed inset-0 z-50 rounded-none w-screen h-screen border-none shadow-2xl'
+          : 'h-[60vh] sm:h-[70vh] min-h-[440px] max-h-[750px] rounded-3xl border-2 border-slate-300 shadow-inner'
+      } bg-slate-100 overflow-hidden select-none flex flex-col`}
     >
       {/* Top Controls & Legend Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto flex items-center gap-4 flex-wrap">
+      <div className="absolute top-4 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+        <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto flex items-center gap-2 sm:gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-600" />
-            <span className="font-bold text-slate-800 text-sm">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" />
+            <span className="font-bold text-slate-800 text-xs sm:text-sm whitespace-nowrap">
               Overview Map ({people.length} {people.length === 1 ? 'member' : 'members'})
             </span>
           </div>
 
+          {/* Desktop Legend */}
           <div className="hidden sm:flex items-center gap-3 text-xs font-bold pl-2 border-l border-slate-200">
             <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
               <span className="w-3 h-0.5 bg-rose-500 rounded inline-block" />
@@ -1337,31 +1357,63 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
               <span>Parent → Child</span>
             </span>
           </div>
+
+          {/* Mobile Legend Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setShowMobileLegend((prev) => !prev)}
+            aria-label="Toggle Map Legend"
+            aria-expanded={showMobileLegend}
+            className="sm:hidden p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            title="Toggle Map Legend"
+          >
+            <Info className="w-4 h-4 text-slate-600" />
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 bg-white/95 backdrop-blur-md p-1.5 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto">
+        {/* Mobile Map Legend Dropdown */}
+        {showMobileLegend && (
+          <div
+            data-testid="mobile-map-legend"
+            className="sm:hidden w-full bg-white/95 backdrop-blur-md p-2.5 rounded-xl border-2 border-slate-200 shadow-md pointer-events-auto flex items-center gap-3 text-xs font-bold animate-in fade-in"
+          >
+            <span className="flex items-center gap-1.5 text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
+              <span className="w-3 h-0.5 bg-rose-500 rounded inline-block" />
+              <span>Partner</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-700 bg-slate-100 px-2 py-1 rounded-lg border border-slate-300">
+              <span className="w-3 h-0.5 bg-slate-500 rounded inline-block" />
+              <span>Parent → Child</span>
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-white/95 backdrop-blur-md p-1 sm:p-1.5 rounded-2xl border-2 border-slate-200 shadow-md pointer-events-auto ml-auto">
           <button
             type="button"
             onClick={handleZoomIn}
             aria-label="Zoom In"
             className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            title="Zoom In"
           >
-            <ZoomIn className="w-5 h-5" />
+            <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <button
             type="button"
             onClick={handleZoomOut}
             aria-label="Zoom Out"
             className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            title="Zoom Out"
           >
-            <ZoomOut className="w-5 h-5" />
+            <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <div className="w-[1px] h-6 bg-slate-200 mx-0.5" />
+          <div className="w-[1px] h-5 sm:h-6 bg-slate-200 mx-0.5" />
           <button
             type="button"
             onClick={handleReset}
             aria-label="Reset View"
             className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            title="Reset View"
           >
             <RotateCcw className="w-4 h-4" />
             <span className="hidden md:inline">Reset</span>
@@ -1375,6 +1427,20 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
           >
             <RotateCcw className="w-4 h-4" />
             <span className="hidden md:inline">Reset Auto-Layout</span>
+          </button>
+          <div className="w-[1px] h-5 sm:h-6 bg-slate-200 mx-0.5" />
+          <button
+            type="button"
+            onClick={() => setIsFullscreen((prev) => !prev)}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            ) : (
+              <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -1634,7 +1700,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
         </svg>
       )}
 
-      {/* Floating Selected Person Action Bar */}
+      {/* Floating Selected Person Action Bar / Mobile Action Sheet */}
       {selectedPersonId && (
         (() => {
           const selected = people.find((p) => p.id === selectedPersonId);
@@ -1642,41 +1708,41 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
           return (
             <div
               data-testid="map-selected-toolbar"
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-slate-900/95 backdrop-blur-md text-white border-2 border-amber-400 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
+              className="fixed sm:absolute bottom-0 sm:bottom-6 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-20 bg-slate-900/95 backdrop-blur-md text-white border-t-2 sm:border-2 border-amber-400 rounded-t-2xl sm:rounded-2xl p-4 sm:px-5 sm:py-3 shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200"
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-3">
                 {selected.avatar_url ? (
                   <img
                     src={selected.avatar_url}
                     alt={[selected.first_name, selected.last_name].filter(Boolean).join(' ')}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-amber-400"
+                    className="w-10 h-10 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-amber-400 shrink-0"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs">
+                  <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-xs shrink-0">
                     {(selected.first_name?.[0] || '').toUpperCase()}
                     {(selected.last_name?.[0] || '').toUpperCase()}
                   </div>
                 )}
-                <div>
-                  <p className="text-sm font-extrabold leading-tight">
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold leading-tight truncate">
                     {[selected.first_name, selected.last_name].filter(Boolean).join(' ')}
                   </p>
-                  <p className="text-[11px] text-slate-300 font-medium">
+                  <p className="text-xs sm:text-[11px] text-slate-300 font-medium">
                     {selected.birth_date ? `b. ${selected.birth_date}` : 'Family Member'}
                   </p>
                 </div>
               </div>
 
-              <div className="h-6 w-px bg-slate-700" />
+              <div className="hidden sm:block h-6 w-px bg-slate-700" />
 
               <div className="flex items-center gap-2">
                 {onEditPerson && (
                   <button
                     type="button"
                     onClick={() => onEditPerson(selected)}
-                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow cursor-pointer flex items-center gap-1.5 transition-colors"
+                    className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-sm sm:text-xs shadow cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Pencil className="w-3.5 h-3.5" />
+                    <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                     <span>Edit Details</span>
                   </button>
                 )}
@@ -1685,9 +1751,9 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectPerson(selected.id)}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-600 cursor-pointer flex items-center gap-1.5 transition-colors"
+                    className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white font-bold text-sm sm:text-xs border border-slate-600 cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Eye className="w-3.5 h-3.5 text-blue-400" />
+                    <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-blue-400" />
                     <span>Focus View</span>
                   </button>
                 )}
@@ -1696,9 +1762,9 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                   type="button"
                   onClick={() => setSelectedPersonId(null)}
                   aria-label="Close selection bar"
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl sm:rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors shrink-0"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>

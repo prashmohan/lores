@@ -1238,6 +1238,109 @@ describe('BirdseyeMapCanvas', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('Responsive Map Viewport, Fullscreen Mode & Mobile Action Sheet', () => {
+    it('renders responsive container height classes by default', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const mapContainer = screen.getByRole('region', { name: /Family Tree Overview Map/i });
+      expect(mapContainer).toHaveClass('h-[60vh]', 'sm:h-[70vh]', 'min-h-[440px]', 'max-h-[750px]');
+    });
+
+    it('toggles fullscreen mode expanding container to fixed fullscreen classes and back', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const mapContainer = screen.getByRole('region', { name: /Family Tree Overview Map/i });
+      const fullscreenBtn = screen.getByRole('button', { name: /Enter Fullscreen|Fullscreen/i });
+      expect(fullscreenBtn).toBeInTheDocument();
+
+      // Enter fullscreen
+      fireEvent.click(fullscreenBtn);
+      expect(mapContainer).toHaveClass('fixed', 'inset-0', 'z-50', 'rounded-none', 'w-screen', 'h-screen');
+
+      // Exit fullscreen
+      const exitBtn = screen.getByRole('button', { name: /Exit Fullscreen/i });
+      expect(exitBtn).toBeInTheDocument();
+      fireEvent.click(exitBtn);
+
+      expect(mapContainer).not.toHaveClass('fixed', 'z-50', 'w-screen', 'h-screen');
+      expect(mapContainer).toHaveClass('h-[60vh]', 'sm:h-[70vh]');
+    });
+
+    it('exits fullscreen mode when Escape key is pressed', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const mapContainer = screen.getByRole('region', { name: /Family Tree Overview Map/i });
+      const fullscreenBtn = screen.getByRole('button', { name: /Enter Fullscreen|Fullscreen/i });
+
+      // Enter fullscreen
+      fireEvent.click(fullscreenBtn);
+      expect(mapContainer).toHaveClass('fixed', 'inset-0', 'z-50');
+
+      // Press Escape
+      fireEvent.keyDown(window, { key: 'Escape' });
+
+      // Fullscreen exited
+      expect(mapContainer).not.toHaveClass('fixed', 'z-50');
+      expect(mapContainer).toHaveClass('h-[60vh]', 'sm:h-[70vh]');
+    });
+
+    it('renders mobile-responsive selected person bottom action sheet with >=44px touch targets', () => {
+      const onSelectPerson = vi.fn();
+      const onEditPerson = vi.fn();
+
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSelectPerson={onSelectPerson}
+          onEditPerson={onEditPerson}
+        />
+      );
+
+      // Select node 1
+      const node1 = screen.getByTestId('map-node-1');
+      fireEvent.click(node1);
+
+      const toolbar = screen.getByTestId('map-selected-toolbar');
+      expect(toolbar).toBeInTheDocument();
+
+      // Has mobile bottom-dock and desktop floating classes
+      expect(toolbar).toHaveClass('fixed', 'sm:absolute', 'bottom-0', 'sm:bottom-6', 'left-0', 'right-0', 'sm:left-1/2', 'rounded-t-2xl', 'sm:rounded-2xl');
+
+      // Action buttons have >=44px touch target ergonomics
+      const editBtn = within(toolbar).getByRole('button', { name: /Edit Details/i });
+      const focusBtn = within(toolbar).getByRole('button', { name: /Focus View/i });
+      const closeBtn = within(toolbar).getByRole('button', { name: /Close selection bar|Close/i });
+
+      expect(editBtn).toHaveClass('min-h-[44px]');
+      expect(focusBtn).toHaveClass('min-h-[44px]');
+      expect(closeBtn).toHaveClass('min-w-[44px]', 'min-h-[44px]');
+
+      // Buttons are functional
+      fireEvent.click(editBtn);
+      expect(onEditPerson).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+
+      fireEvent.click(focusBtn);
+      expect(onSelectPerson).toHaveBeenCalledWith('1');
+
+      fireEvent.click(closeBtn);
+      expect(screen.queryByTestId('map-selected-toolbar')).not.toBeInTheDocument();
+    });
+
+    it('collapses control bar legend and allows mobile legend disclosure toggle', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      // On mobile disclosure toggle button is available
+      const legendToggle = screen.getByRole('button', { name: /Toggle Map Legend|Map Legend/i });
+      expect(legendToggle).toBeInTheDocument();
+
+      // Clicking legend toggle reveals legend details
+      fireEvent.click(legendToggle);
+      expect(screen.getByTestId('mobile-map-legend')).toBeInTheDocument();
+      expect(within(screen.getByTestId('mobile-map-legend')).getByText('Partner')).toBeInTheDocument();
+      expect(within(screen.getByTestId('mobile-map-legend')).getByText('Parent → Child')).toBeInTheDocument();
+    });
+  });
 });
 
 

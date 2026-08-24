@@ -65,7 +65,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   const latestCustomPositionsRef = useRef<Record<string, { x: number; y: number }>>(
     serverPositions || {}
   );
-  const [_draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const justDraggedRef = useRef<boolean>(false);
   const draggedNodeRef = useRef<{
     id: string;
@@ -86,6 +86,16 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   const singleTouchRef = useRef<{ x: number; y: number; triggered: boolean } | null>(null);
   const [showTouchToast, setShowTouchToast] = useState(false);
   const touchToastTimerRef = useRef<NodeJS.Timeout | number | null>(null);
+  const nodeTouchTimerRef = useRef<NodeJS.Timeout | number | null>(null);
+  const touchDraggedNodeRef = useRef<{
+    id: string;
+    startTouchX: number;
+    startTouchY: number;
+    startNodeX: number;
+    startNodeY: number;
+    isLifted: boolean;
+    hasMoved: boolean;
+  } | null>(null);
 
   const triggerTouchGuidanceToast = () => {
     setShowTouchToast(true);
@@ -102,6 +112,9 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
     return () => {
       if (touchToastTimerRef.current) {
         clearTimeout(touchToastTimerRef.current);
+      }
+      if (nodeTouchTimerRef.current) {
+        clearTimeout(nodeTouchTimerRef.current);
       }
     };
   }, []);
@@ -1103,7 +1116,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
 
       setZoom(newZoom);
       setPan({ x: newPanX, y: newPanY });
-    } else if (e.touches.length === 1 && singleTouchRef.current) {
+    } else if (e.touches.length === 1 && singleTouchRef.current && !touchDraggedNodeRef.current) {
       const touch = e.touches[0];
       const delta = Math.hypot(touch.clientX - singleTouchRef.current.x, touch.clientY - singleTouchRef.current.y);
       if (!singleTouchRef.current.triggered && delta > 10) {
@@ -1140,6 +1153,162 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
       multiTouchRef.current = null;
       singleTouchRef.current = null;
     }
+  };
+
+  // Node Touch Drag-and-Drop Handlers (Long-Press Detection, Visual Lift, Touch Move, Drop & Save)
+  const handleNodeTouchStart = (e: React.TouchEvent<SVGGElement>, node: PositionedNode) => {
+    if (e.touches.length !== 1) {
+      if (nodeTouchTimerRef.current) {
+        clearTimeout(nodeTouchTimerRef.current);
+        nodeTouchTimerRef.current = null;
+      }
+      if (touchDraggedNodeRef.current) {
+        if (touchDraggedNodeRef.current.isLifted) {
+          setDraggedNodeId(null);
+        }
+        touchDraggedNodeRef.current = null;
+      }
+      return;
+    }
+
+    if (nodeTouchTimerRef.current) {
+      clearTimeout(nodeTouchTimerRef.current);
+      nodeTouchTimerRef.current = null;
+    }
+
+    singleTouchRef.current = null;
+
+    const touch = e.touches[0];
+    touchDraggedNodeRef.current = {
+      id: node.person.id,
+      startTouchX: touch.clientX,
+      startTouchY: touch.clientY,
+      startNodeX: node.x,
+      startNodeY: node.y,
+      isLifted: false,
+      hasMoved: false,
+    };
+
+    if (canEdit !== false) {
+      nodeTouchTimerRef.current = setTimeout(() => {
+        if (touchDraggedNodeRef.current && touchDraggedNodeRef.current.id === node.person.id) {
+          touchDraggedNodeRef.current.isLifted = true;
+          setDraggedNodeId(node.person.id);
+          try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate(40);
+            }
+          } catch {
+            // Ignore if vibrate is unsupported/blocked
+          }
+        }
+        nodeTouchTimerRef.current = null;
+      }, 250);
+    }
+  };
+
+  const handleNodeTouchMove = (e: React.TouchEvent<SVGGElement>) => {
+    if (e.touches.length !== 1 || !touchDraggedNodeRef.current) {
+      if (nodeTouchTimerRef.current) {
+        clearTimeout(nodeTouchTimerRef.current);
+        nodeTouchTimerRef.current = null;
+      }
+      return;
+    }
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchDraggedNodeRef.current.startTouchX;
+    const dy = touch.clientY - touchDraggedNodeRef.current.startTouchY;
+    const distance = Math.hypot(dx, dy);
+
+    if (!touchDraggedNodeRef.current.isLifted) {
+      if (distance > 8) {
+        // Finger moved before 250ms hold -> cancel long-press timer and allow page scroll
+        if (nodeTouchTimerRef.current) {
+          clearTimeout(nodeTouchTimerRef.current);
+          nodeTouchTimerRef.current = null;
+        }
+      }
+      return;
+    }
+
+    // Node is lifted: prevent page scrolling & canvas pan toast, move node
+    e.preventDefault?.();
+    e.stopPropagation?.();
+
+    if (distance > 1) {
+      touchDraggedNodeRef.current.hasMoved = true;
+    }
+
+    const canvasDx = dx / zoom;
+    const canvasDy = dy / zoom;
+    const newX = Math.round(touchDraggedNodeRef.current.startNodeX + canvasDx);
+    const newY = Math.round(touchDraggedNodeRef.current.startNodeY + canvasDy);
+
+    setCustomPositions((prev) => {
+      const next = { ...prev, [touchDraggedNodeRef.current!.id]: { x: newX, y: newY } };
+      latestCustomPositionsRef.current = next;
+      return next;
+    });
+  };
+
+  const handleNodeTouchEnd = (e: React.TouchEvent<SVGGElement>, node: PositionedNode) => {
+    if (nodeTouchTimerRef.current) {
+      clearTimeout(nodeTouchTimerRef.current);
+      nodeTouchTimerRef.current = null;
+    }
+
+    if (touchDraggedNodeRef.current) {
+      if (touchDraggedNodeRef.current.isLifted) {
+        if (touchDraggedNodeRef.current.hasMoved) {
+          onSavePositions?.(latestCustomPositionsRef.current);
+          justDraggedRef.current = true;
+          setTimeout(() => {
+            justDraggedRef.current = false;
+          }, 200);
+        }
+        setDraggedNodeId(null);
+        touchDraggedNodeRef.current = null;
+      } else {
+        // Short tap: check movement < 8px
+        const touch = e.changedTouches?.[0];
+        const dist = touch
+          ? Math.hypot(
+              touch.clientX - touchDraggedNodeRef.current.startTouchX,
+              touch.clientY - touchDraggedNodeRef.current.startTouchY
+            )
+          : 0;
+        if (dist <= 8) {
+          setSelectedPersonId(node.person.id);
+        }
+        touchDraggedNodeRef.current = null;
+      }
+    }
+
+    if (e.touches.length === 0) {
+      setDraggedNodeId(null);
+      touchDraggedNodeRef.current = null;
+    }
+  };
+
+  const handleNodeTouchCancel = () => {
+    if (nodeTouchTimerRef.current) {
+      clearTimeout(nodeTouchTimerRef.current);
+      nodeTouchTimerRef.current = null;
+    }
+
+    if (touchDraggedNodeRef.current?.isLifted) {
+      if (touchDraggedNodeRef.current.hasMoved) {
+        onSavePositions?.(latestCustomPositionsRef.current);
+        justDraggedRef.current = true;
+        setTimeout(() => {
+          justDraggedRef.current = false;
+        }, 200);
+      }
+    }
+
+    setDraggedNodeId(null);
+    touchDraggedNodeRef.current = null;
   };
 
   return (
@@ -1295,6 +1464,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
 
             {/* Person Nodes */}
             {nodes.map((node) => {
+              const isLifted = draggedNodeId === node.person.id;
               const isFocus = node.person.id === (selectedPersonId || focusPersonId);
               const fullName = [node.person.first_name, node.person.last_name].filter(Boolean).join(' ');
 
@@ -1328,6 +1498,10 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                       setDraggedNodeId(node.person.id);
                     }
                   }}
+                  onTouchStart={(e) => handleNodeTouchStart(e, node)}
+                  onTouchMove={handleNodeTouchMove}
+                  onTouchEnd={(e) => handleNodeTouchEnd(e, node)}
+                  onTouchCancel={handleNodeTouchCancel}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (justDraggedRef.current) return;
@@ -1354,14 +1528,16 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                     rx="16"
                     ry="16"
                     className={`transition-all duration-200 ${
-                      isFocus
+                      isLifted
+                        ? 'fill-amber-50 stroke-amber-400 stroke-[3.5] filter drop-shadow-xl'
+                        : isFocus
                         ? 'fill-amber-50 stroke-amber-500 stroke-[3]'
                         : 'fill-white stroke-slate-300 stroke-2 group-hover:stroke-amber-400 group-hover:shadow-md'
                     }`}
                   />
 
                   {/* Focus Ring Indicator */}
-                  {isFocus && (
+                  {isFocus && !isLifted && (
                     <rect
                       x="-4"
                       y="-4"

@@ -960,6 +960,284 @@ describe('BirdseyeMapCanvas', () => {
       vi.useRealTimers();
     });
   });
+
+  describe('Node Touch Drag-and-Drop & Gestures', () => {
+    it('initiates drag mode after 250ms long-press with haptic vibration and visual lifted state', () => {
+      vi.useFakeTimers();
+      const vibrateMock = vi.fn();
+      navigator.vibrate = vibrateMock;
+
+      const onSavePositions = vi.fn();
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+      const rect1 = node1.querySelector('rect')!;
+
+      // Initial state: not lifted
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).toContain('stroke-slate-300');
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).not.toContain('drop-shadow-xl');
+
+      // Touch start on node 1
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Advance time less than 250ms (e.g. 200ms)
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(vibrateMock).not.toHaveBeenCalled();
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).not.toContain('drop-shadow-xl');
+
+      // Advance time to 250ms
+      act(() => {
+        vi.advanceTimersByTime(50);
+      });
+
+      expect(vibrateMock).toHaveBeenCalledWith(40);
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).toContain('stroke-amber-400');
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).toContain('drop-shadow-xl');
+
+      // Subsequent touch move repositions node and prevents default
+      const moveEvent = createEvent.touchMove(node1, {
+        touches: [{ clientX: 160, clientY: 140 }],
+      });
+      const preventDefaultSpy = vi.spyOn(moveEvent, 'preventDefault');
+      fireEvent(node1, moveEvent);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+
+      // Touchend saves positions
+      fireEvent.touchEnd(node1, {
+        touches: [],
+        changedTouches: [{ clientX: 160, clientY: 140 }],
+      });
+
+      expect(onSavePositions).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('selects node on short tap (<250ms, <8px movement) without dragging or saving', () => {
+      vi.useFakeTimers();
+      const onSavePositions = vi.fn();
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+
+      // Touch start on node 1
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Advance 100ms
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      // Small move < 8px
+      fireEvent.touchMove(node1, {
+        touches: [{ clientX: 102, clientY: 103 }],
+      });
+
+      // Touch end at 150ms
+      fireEvent.touchEnd(node1, {
+        touches: [],
+        changedTouches: [{ clientX: 102, clientY: 103 }],
+      });
+
+      // Advance past 250ms to ensure timer doesn't fire later
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // Person is selected (floating toolbar appears)
+      expect(screen.getByTestId('map-selected-toolbar')).toBeInTheDocument();
+      expect(within(screen.getByTestId('map-selected-toolbar')).getByText('Arthur Miller')).toBeInTheDocument();
+      expect(onSavePositions).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('cancels long-press timer when finger moves >8px before 250ms and does not prevent default', () => {
+      vi.useFakeTimers();
+      const vibrateMock = vi.fn();
+      navigator.vibrate = vibrateMock;
+      const onSavePositions = vi.fn();
+
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+      const rect1 = node1.querySelector('rect')!;
+
+      // Touch start
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Move > 8px (e.g. 15px) at 100ms
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      const moveEvent = createEvent.touchMove(node1, {
+        touches: [{ clientX: 115, clientY: 100 }],
+      });
+      const preventDefaultSpy = vi.spyOn(moveEvent, 'preventDefault');
+      fireEvent(node1, moveEvent);
+
+      // Should not prevent default (allows scrolling)
+      expect(preventDefaultSpy).not.toHaveBeenCalled();
+
+      // Advance past 250ms
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // Should not have vibrated or entered lifted state
+      expect(vibrateMock).not.toHaveBeenCalled();
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).not.toContain('drop-shadow-xl');
+
+      // Touch end
+      fireEvent.touchEnd(node1, {
+        touches: [],
+        changedTouches: [{ clientX: 115, clientY: 100 }],
+      });
+
+      expect(onSavePositions).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('disables long-press drag when canEdit is false', () => {
+      vi.useFakeTimers();
+      const vibrateMock = vi.fn();
+      navigator.vibrate = vibrateMock;
+      const onSavePositions = vi.fn();
+
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          canEdit={false}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+      const rect1 = node1.querySelector('rect')!;
+
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      expect(vibrateMock).not.toHaveBeenCalled();
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).not.toContain('drop-shadow-xl');
+
+      fireEvent.touchEnd(node1, {
+        touches: [],
+        changedTouches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      expect(onSavePositions).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('prevents opening selection toolbar immediately after a drag drop via justDraggedRef guard', () => {
+      vi.useFakeTimers();
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const node1 = screen.getByTestId('map-node-1');
+
+      // Long press to lift
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+
+      // Move
+      fireEvent.touchMove(node1, {
+        touches: [{ clientX: 150, clientY: 150 }],
+      });
+
+      // Touch end
+      fireEvent.touchEnd(node1, {
+        touches: [],
+        changedTouches: [{ clientX: 150, clientY: 150 }],
+      });
+
+      // Synthetic click immediately after touchEnd (common in mobile browsers)
+      fireEvent.click(node1);
+
+      // Selection toolbar should NOT open because justDraggedRef guard is active
+      expect(screen.queryByTestId('map-selected-toolbar')).not.toBeInTheDocument();
+
+      // After 200ms guard expires, click works again
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      fireEvent.click(node1);
+      expect(screen.getByTestId('map-selected-toolbar')).toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('handles touchCancel gracefully after drag, saving positions and clearing lifted state', () => {
+      vi.useFakeTimers();
+      const onSavePositions = vi.fn();
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+      const rect1 = node1.querySelector('rect')!;
+
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+
+      fireEvent.touchMove(node1, {
+        touches: [{ clientX: 150, clientY: 150 }],
+      });
+
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).toContain('drop-shadow-xl');
+
+      fireEvent.touchCancel(node1);
+
+      expect(onSavePositions).toHaveBeenCalledTimes(1);
+      expect(rect1.className.baseVal || rect1.getAttribute('class')).not.toContain('drop-shadow-xl');
+
+      vi.useRealTimers();
+    });
+  });
 });
 
 

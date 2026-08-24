@@ -50,6 +50,7 @@ Lores is structured as a full-stack monorepo:
 
 ```
 lores/
+├── .agent/                   # Project-local agent skills (closed-loop-security)
 ├── backend/                  # FastAPI (Python 3.12+), SQLAlchemy 2.0 (async), Pydantic v2, SQLite
 │   ├── app/
 │   │   ├── api/              # RESTful API router (v1 endpoints for auth, tree, people, lore, audit/trash, admin, data exchange)
@@ -57,16 +58,17 @@ lores/
 │   │   ├── models/           # SQLAlchemy models (User, Workspace, Person, FamilyUnion, ChildRelationship, LoreNote, AuditLog)
 │   │   ├── schemas/          # Pydantic v2 validation & response schemas
 │   │   └── services/         # Business logic (cycle detection, neighborhood graph, audit ledger, auth, email, GEDCOM, data exchange)
-│   └── tests/                # Pytest async test suite (154 tests, 100% passing)
+│   └── tests/                # Pytest async test suite (157 tests, 100% passing)
 ├── frontend/                 # React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons
 │   ├── e2e/                  # Playwright E2E browser accessibility test suite
 │   ├── src/
 │   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin, interview)
 │   │   ├── lib/              # Type-safe API client, token storage, autocomplete helpers
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (162 tests across 19 suites)
+│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (168 tests across 20 suites)
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
+├── stackhawk.yml             # DAST scanner configuration for local security remediation
 └── docker-compose.yml        # Multi-stage production and development container orchestrations
 ```
 
@@ -278,12 +280,12 @@ This executes all 7 verification steps:
 
 | Step | Scope | Tool | Checks / Standard |
 | :--- | :--- | :--- | :--- |
-| **1** | Backend | `pytest` | **154** async unit & integration tests (100% pass) |
+| **1** | Backend | `pytest` | **157** async unit & integration tests (100% pass) |
 | **2** | Backend | `ruff` | PEP 8 linting & formatting compliance (`ruff check .` & `ruff format --check .`) |
 | **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
 | **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
 | **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
-| **6** | Frontend | `vitest` + `axe` | **162** component unit & `vitest-axe` DOM accessibility audits (19 suites) |
+| **6** | Frontend | `vitest` + `axe` | **168** component unit & `vitest-axe` DOM accessibility audits (20 suites) |
 | **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
 
 ---

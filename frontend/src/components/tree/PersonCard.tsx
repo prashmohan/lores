@@ -105,7 +105,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
         ) : (
           <span />
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {onEditPhoto && (
             <button
               type="button"
@@ -113,11 +113,11 @@ export const PersonCard: React.FC<PersonCardProps> = ({
                 e.stopPropagation();
                 onEditPhoto(person);
               }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label={`Change photo for ${fullName}`}
               title="Change Photo"
             >
-              <Camera className="w-3.5 h-3.5" />
+              <Camera className="w-4 h-4" />
             </button>
           )}
           {onEdit && (
@@ -127,11 +127,11 @@ export const PersonCard: React.FC<PersonCardProps> = ({
                 e.stopPropagation();
                 onEdit(person);
               }}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label={`Edit details for ${fullName}`}
               title="Edit Details"
             >
-              <Pencil className="w-3.5 h-3.5" />
+              <Pencil className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -174,7 +174,7 @@ export const PersonCard: React.FC<PersonCardProps> = ({
         <button
           type="button"
           onClick={() => onEdit(person)}
-          className="mt-3 w-full py-2 px-3 rounded-xl bg-amber-200/90 hover:bg-amber-300 active:bg-amber-400 text-amber-950 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-amber-400/60 shadow-2xs"
+          className="mt-3 w-full min-h-[44px] py-2.5 px-3 rounded-xl bg-amber-200/90 hover:bg-amber-300 active:bg-amber-400 text-amber-950 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-amber-400/60 shadow-2xs"
         >
           <Pencil className="w-3.5 h-3.5" />
           <span>Edit Details</span>

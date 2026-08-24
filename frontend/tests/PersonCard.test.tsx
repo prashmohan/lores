@@ -146,4 +146,37 @@ describe('PersonCard', () => {
     expect(screen.getByText('Plato')).toBeInTheDocument();
     expect(screen.getByText('P')).toBeInTheDocument();
   });
+
+  it('provides >= 44x44px touch targets on photo and edit action buttons', () => {
+    render(
+      <PersonCard
+        person={mockPerson}
+        onEdit={vi.fn()}
+        onEditPhoto={vi.fn()}
+      />
+    );
+
+    const photoBtn = screen.getByRole('button', { name: /Change photo for Arthur Miller/i });
+    const editBtn = screen.getByRole('button', { name: /Edit details for Arthur Miller/i });
+
+    expect(photoBtn.className).toContain('min-w-[44px]');
+    expect(photoBtn.className).toContain('min-h-[44px]');
+    expect(editBtn.className).toContain('min-w-[44px]');
+    expect(editBtn.className).toContain('min-h-[44px]');
+  });
+
+  it('provides >= 44px min-height on focus person card Edit Details button', () => {
+    render(
+      <PersonCard
+        person={mockPerson}
+        isFocus={true}
+        onEdit={vi.fn()}
+      />
+    );
+
+    const focusEditBtn = screen.getByRole('button', { name: /^Edit Details$/i });
+    expect(focusEditBtn.className).toContain('min-h-[44px]');
+  });
 });
+
+

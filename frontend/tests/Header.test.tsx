@@ -284,4 +284,128 @@ describe('Header', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('renders mobile navigation menu toggle button with accessible aria attributes', () => {
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        userRole="admin"
+        onSelectWorkspace={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    expect(toggleBtn).toBeInTheDocument();
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(toggleBtn.className).toContain('min-w-[44px]');
+    expect(toggleBtn.className).toContain('min-h-[44px]');
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
+
+  it('opens mobile drawer on toggle click and allows triggering secondary actions', () => {
+    const onOpenMembers = vi.fn();
+    const onOpenDataBackup = vi.fn();
+    const onToggleHighContrast = vi.fn();
+    const onLogout = vi.fn();
+
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        userRole="admin"
+        onSelectWorkspace={vi.fn()}
+        onOpenMembers={onOpenMembers}
+        onOpenDataBackup={onOpenDataBackup}
+        onLogout={onLogout}
+        highContrast={false}
+        onToggleHighContrast={onToggleHighContrast}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    fireEvent.click(toggleBtn);
+
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+    const mobileMenu = screen.getByTestId('mobile-nav-menu');
+    expect(mobileMenu).toBeInTheDocument();
+
+    // Secondary actions inside mobile drawer
+    const mobileMembersBtn = screen.getByTestId('mobile-menu-members');
+    expect(mobileMembersBtn.className).toContain('min-h-[44px]');
+    fireEvent.click(mobileMembersBtn);
+    expect(onOpenMembers).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+
+    // Open again and test high contrast
+    fireEvent.click(toggleBtn);
+    const mobileContrastBtn = screen.getByTestId('mobile-menu-contrast');
+    expect(mobileContrastBtn.className).toContain('min-h-[44px]');
+    fireEvent.click(mobileContrastBtn);
+    expect(onToggleHighContrast).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+
+    // Open again and test logout
+    fireEvent.click(toggleBtn);
+    const mobileLogoutBtn = screen.getByTestId('mobile-menu-logout');
+    expect(mobileLogoutBtn.className).toContain('min-h-[44px]');
+    fireEvent.click(mobileLogoutBtn);
+    expect(onLogout).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
+
+  it('toggles mobile drawer open and closed when clicking toggle button repeatedly', () => {
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(screen.getByTestId('mobile-nav-menu')).toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
+
+  it('renders Super Admin action in mobile menu for superadmin users', () => {
+    const onOpenSuperAdmin = vi.fn();
+    render(
+      <Header
+        currentUser={mockSuperAdmin}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onOpenSuperAdmin={onOpenSuperAdmin}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    fireEvent.click(toggleBtn);
+
+    const mobileSuperAdminBtn = screen.getByTestId('mobile-menu-superadmin');
+    expect(mobileSuperAdminBtn).toBeInTheDocument();
+    expect(mobileSuperAdminBtn.className).toContain('min-h-[44px]');
+    fireEvent.click(mobileSuperAdminBtn);
+    expect(onOpenSuperAdmin).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
 });
+

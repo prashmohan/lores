@@ -58,7 +58,7 @@ lores/
 │   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin, interview)
 │   │   ├── lib/              # Type-safe API client, token storage, autocomplete helpers
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (150 tests across 20 suites)
+│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (160 tests across 19 suites)
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
 └── docker-compose.yml        # Multi-stage production and development container orchestrations
@@ -276,7 +276,7 @@ This executes all 7 verification steps:
 | **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
 | **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
 | **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
-| **6** | Frontend | `vitest` + `axe` | **150** component unit & `vitest-axe` DOM accessibility audits (20 suites) |
+| **6** | Frontend | `vitest` + `axe` | **160** component unit & `vitest-axe` DOM accessibility audits (19 suites) |
 | **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
 
 ---

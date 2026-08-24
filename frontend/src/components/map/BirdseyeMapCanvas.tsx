@@ -1364,7 +1364,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             onClick={() => setShowMobileLegend((prev) => !prev)}
             aria-label="Toggle Map Legend"
             aria-expanded={showMobileLegend}
-            className="sm:hidden p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="sm:hidden min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
             title="Toggle Map Legend"
           >
             <Info className="w-4 h-4 text-slate-600" />
@@ -1393,7 +1393,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             type="button"
             onClick={handleZoomIn}
             aria-label="Zoom In"
-            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1402,7 +1402,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             type="button"
             onClick={handleZoomOut}
             aria-label="Zoom Out"
-            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1412,7 +1412,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             type="button"
             onClick={handleReset}
             aria-label="Reset View"
-            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer gap-1.5 text-xs font-bold"
             title="Reset View"
           >
             <RotateCcw className="w-4 h-4" />
@@ -1422,7 +1422,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             type="button"
             onClick={handleResetLayout}
             aria-label="Reset Auto-Layout"
-            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer gap-1.5 text-xs font-bold"
             title="Reset Auto-Layout"
           >
             <RotateCcw className="w-4 h-4" />
@@ -1433,7 +1433,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             type="button"
             onClick={() => setIsFullscreen((prev) => !prev)}
             aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
+            className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer"
             title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
             {isFullscreen ? (

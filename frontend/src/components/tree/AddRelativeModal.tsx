@@ -177,7 +177,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl z-50 max-h-[90vh] overflow-y-auto border-2 border-slate-200"
+          className="fixed left-1/2 bottom-0 -translate-x-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto border-2 border-slate-200"
           aria-describedby="add-relative-description"
         >
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">
@@ -251,7 +251,7 @@ export const AddRelativeModal: React.FC<AddRelativeModalProps> = ({
                   id="other_parent_select"
                   value={selectedOtherParentId}
                   onChange={(e) => setSelectedOtherParentId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border-2 border-amber-300 focus:border-amber-500 text-sm text-slate-900 bg-white font-medium cursor-pointer"
+                  className="w-full px-3.5 py-2.5 rounded-lg border-2 border-amber-300 focus:border-amber-500 text-base text-slate-900 bg-white font-medium cursor-pointer"
                 >
                   <option value="">No other parent / Unknown</option>
                   {partners.map((p) => (

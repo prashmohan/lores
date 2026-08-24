@@ -158,7 +158,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
         <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-40 transition-opacity" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white rounded-2xl p-6 shadow-2xl z-50 max-h-[90vh] overflow-y-auto border-2 border-slate-200"
+          className="fixed left-1/2 bottom-0 -translate-x-1/2 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 w-full max-w-xl bg-white rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl z-50 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto border-2 border-slate-200"
           aria-describedby="edit-person-description"
         >
           <div className="flex items-center justify-between pb-4 border-b border-slate-200">
@@ -601,7 +601,7 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                   type="button"
                   onClick={() => setIsConfirmingDelete(true)}
                   disabled={loading}
-                  className="px-3.5 py-2 rounded-lg text-rose-700 hover:bg-rose-50 font-bold text-sm transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-2.5 rounded-lg text-rose-700 hover:bg-rose-50 font-bold text-sm transition-colors cursor-pointer flex items-center gap-1.5 min-h-[44px]"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Person</span>
@@ -612,14 +612,14 @@ export const EditPersonModal: React.FC<EditPersonModalProps> = ({
                     type="button"
                     onClick={onClose}
                     disabled={loading}
-                    className="px-5 py-2.5 rounded-lg border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer"
+                    className="px-5 py-2.5 rounded-lg border-2 border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer min-h-[44px]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow transition-colors disabled:opacity-50 cursor-pointer"
+                    className="px-6 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow transition-colors disabled:opacity-50 cursor-pointer min-h-[44px]"
                   >
                     {loading ? 'Saving...' : 'Save Changes'}
                   </button>

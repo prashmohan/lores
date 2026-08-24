@@ -83,8 +83,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Workspace Switcher & Create Button */}
           {workspaces.length > 0 && currentWorkspace && (
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="relative inline-flex items-center min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink">
+              <div className="relative inline-flex items-center min-w-0 max-w-[130px] sm:max-w-[180px] lg:max-w-[220px]">
                 <label htmlFor="workspace-select" className="sr-only">
                   Select Workspace
                 </label>
@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onSelectWorkspace(selected.workspace);
                     }
                   }}
-                  className="appearance-none bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 font-bold text-xs sm:text-sm rounded-xl pl-2.5 sm:pl-3 pr-7 sm:pr-8 py-1.5 sm:py-2 cursor-pointer focus:border-amber-500 transition-colors max-w-[130px] sm:max-w-[240px] truncate"
+                  className="w-full appearance-none bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-slate-900 font-bold text-xs sm:text-sm rounded-xl pl-2.5 sm:pl-3 pr-7 sm:pr-8 py-1.5 sm:py-2 cursor-pointer focus:border-amber-500 transition-colors truncate"
                 >
                   {workspaces.map((item) => (
                     <option key={item.workspace.id} value={item.workspace.id}>
@@ -122,7 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-amber-100 hover:text-amber-900 border-2 border-slate-300 hover:border-amber-400 text-slate-700 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shrink-0"
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="hidden lg:inline">New Family</span>
+                  <span className="hidden xl:inline">New Family</span>
                 </button>
               )}
             </div>

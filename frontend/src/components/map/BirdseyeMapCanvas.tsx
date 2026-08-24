@@ -985,6 +985,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggedNodeRef.current) {
+      const nodeId = draggedNodeRef.current.id;
       const dx = (e.clientX - draggedNodeRef.current.startPointerX) / zoom;
       const dy = (e.clientY - draggedNodeRef.current.startPointerY) / zoom;
       if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
@@ -993,7 +994,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
       const newX = Math.round(draggedNodeRef.current.startNodeX + dx);
       const newY = Math.round(draggedNodeRef.current.startNodeY + dy);
       setCustomPositions((prev) => {
-        const next = { ...prev, [draggedNodeRef.current!.id]: { x: newX, y: newY } };
+        const next = { ...prev, [nodeId]: { x: newX, y: newY } };
         latestCustomPositionsRef.current = next;
         return next;
       });
@@ -1023,6 +1024,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
   useEffect(() => {
     const onWindowMouseMove = (e: MouseEvent) => {
       if (draggedNodeRef.current) {
+        const nodeId = draggedNodeRef.current.id;
         const dx = (e.clientX - draggedNodeRef.current.startPointerX) / zoom;
         const dy = (e.clientY - draggedNodeRef.current.startPointerY) / zoom;
         if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
@@ -1031,7 +1033,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
         const newX = Math.round(draggedNodeRef.current.startNodeX + dx);
         const newY = Math.round(draggedNodeRef.current.startNodeY + dy);
         setCustomPositions((prev) => {
-          const next = { ...prev, [draggedNodeRef.current!.id]: { x: newX, y: newY } };
+          const next = { ...prev, [nodeId]: { x: newX, y: newY } };
           latestCustomPositionsRef.current = next;
           return next;
         });
@@ -1255,13 +1257,14 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
       touchDraggedNodeRef.current.hasMoved = true;
     }
 
+    const nodeId = touchDraggedNodeRef.current.id;
     const canvasDx = dx / zoom;
     const canvasDy = dy / zoom;
     const newX = Math.round(touchDraggedNodeRef.current.startNodeX + canvasDx);
     const newY = Math.round(touchDraggedNodeRef.current.startNodeY + canvasDy);
 
     setCustomPositions((prev) => {
-      const next = { ...prev, [touchDraggedNodeRef.current!.id]: { x: newX, y: newY } };
+      const next = { ...prev, [nodeId]: { x: newX, y: newY } };
       latestCustomPositionsRef.current = next;
       return next;
     });
@@ -1461,7 +1464,9 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
         <svg
           ref={svgRef}
           aria-label="Family tree pedigree chart"
-          className="w-full h-full cursor-grab active:cursor-grabbing"
+          className="w-full h-full cursor-grab active:cursor-grabbing touch-none select-none"
+          style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}
+          onContextMenu={(e) => e.preventDefault()}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -1550,6 +1555,8 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                   key={node.person.id}
                   data-testid={`map-node-${node.person.id}`}
                   transform={`translate(${node.x}, ${node.y})`}
+                  style={{ touchAction: 'none', WebkitTouchCallout: 'none' }}
+                  onContextMenu={(e) => e.preventDefault()}
                   onMouseDown={(e) => {
                     if (e.button === 0 && canEdit !== false) {
                       e.stopPropagation();
@@ -1585,7 +1592,7 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
                   aria-label={`${fullName}${datesLabel ? `, ${datesLabel}` : ''}`}
                   className={`${
                     canEdit !== false ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
-                  } group focus:outline-none`}
+                  } group focus:outline-none touch-none select-none`}
                 >
                   {/* Node Background Rectangle */}
                   <rect

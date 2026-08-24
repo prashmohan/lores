@@ -1341,7 +1341,74 @@ describe('BirdseyeMapCanvas', () => {
       expect(within(screen.getByTestId('mobile-map-legend')).getByText('Parent → Child')).toBeInTheDocument();
     });
   });
+
+  describe('Android Chrome & Mobile Touch Drag Stability', () => {
+    it('prevents default on contextmenu event on canvas and nodes to suppress Android context menu and text drag', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const svg = screen.getByLabelText('Family tree pedigree chart');
+      const node1 = screen.getByTestId('map-node-1');
+
+      const svgContextEvent = createEvent.contextMenu(svg);
+      const svgPreventSpy = vi.spyOn(svgContextEvent, 'preventDefault');
+      fireEvent(svg, svgContextEvent);
+      expect(svgPreventSpy).toHaveBeenCalled();
+
+      const nodeContextEvent = createEvent.contextMenu(node1);
+      const nodePreventSpy = vi.spyOn(nodeContextEvent, 'preventDefault');
+      fireEvent(node1, nodeContextEvent);
+      expect(nodePreventSpy).toHaveBeenCalled();
+    });
+
+    it('enforces touch-none, select-none, and touchAction style on interactive SVG canvas and draggable nodes', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const svg = screen.getByLabelText('Family tree pedigree chart');
+      const node1 = screen.getByTestId('map-node-1');
+
+      expect(svg).toHaveClass('touch-none', 'select-none');
+      expect(node1).toHaveClass('touch-none', 'select-none');
+    });
+
+    it('does not throw or crash when ref is cleared during rapid touch move / cancel cycles', () => {
+      vi.useFakeTimers();
+      const onSavePositions = vi.fn();
+      render(
+        <BirdseyeMapCanvas
+          people={mockPeople}
+          onSavePositions={onSavePositions}
+        />
+      );
+
+      const node1 = screen.getByTestId('map-node-1');
+
+      // Touch start
+      fireEvent.touchStart(node1, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Long press hold
+      act(() => {
+        vi.advanceTimersByTime(250);
+      });
+
+      // Move while lifted
+      expect(() => {
+        fireEvent.touchMove(node1, {
+          touches: [{ clientX: 180, clientY: 160 }],
+        });
+      }).not.toThrow();
+
+      // Sudden touch cancel
+      expect(() => {
+        fireEvent.touchCancel(node1);
+      }).not.toThrow();
+
+      vi.useRealTimers();
+    });
+  });
 });
+
 
 
 

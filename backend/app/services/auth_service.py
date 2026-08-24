@@ -239,3 +239,69 @@ def verify_google_id_token(db: Session, id_token: str) -> tuple[User, str]:
 
     jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
     return user, jwt_token
+
+
+def generate_oauth_state(redirect_target: str = "/") -> str:
+    """Generate a signed, short-lived JWT state token with anti-CSRF nonce and redirect target."""
+    current_settings = get_settings()
+    payload = {
+        "nonce": secrets.token_urlsafe(16),
+        "target": redirect_target,
+        "exp": datetime.now(UTC) + timedelta(minutes=10),
+        "type": "oauth_state",
+    }
+    return str(
+        jwt.encode(payload, current_settings.JWT_SECRET, algorithm=current_settings.JWT_ALGORITHM)
+    )
+
+
+def validate_oauth_state(state: str) -> dict[str, Any]:
+    """Validate and decode a signed OAuth state token."""
+    current_settings = get_settings()
+    try:
+        payload: dict[str, Any] = jwt.decode(
+            state,
+            current_settings.JWT_SECRET,
+            algorithms=[current_settings.JWT_ALGORITHM],
+        )
+        if payload.get("type") != "oauth_state":
+            raise ValueError("Invalid state token")
+        return payload
+    except (JWTError, ValueError) as err:
+        raise ValueError("Invalid state token") from err
+
+
+async def exchange_google_code_for_user(
+    db: Session, code: str, redirect_uri: str
+) -> tuple[User, str]:
+    """Exchange Google OAuth authorization code for an ID token, verify it, and issue a Lores session."""
+    current_settings = get_settings()
+    if not current_settings.GOOGLE_CLIENT_ID or not current_settings.GOOGLE_CLIENT_SECRET:
+        raise ValueError("Google OAuth is not configured on this server")
+
+    token_endpoint = "https://oauth2.googleapis.com/token"
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.post(
+                token_endpoint,
+                data={
+                    "code": code,
+                    "client_id": current_settings.GOOGLE_CLIENT_ID,
+                    "client_secret": current_settings.GOOGLE_CLIENT_SECRET,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            )
+        except httpx.HTTPError as exc:
+            raise ValueError(f"Google token exchange failed: {exc}") from exc
+
+    if response.status_code != 200:
+        raise ValueError(f"Google token exchange failed: {response.text}")
+
+    data = response.json()
+    id_token_jwt = data.get("id_token")
+    if not id_token_jwt:
+        raise ValueError("Google did not return an id_token")
+
+    user, session_token = verify_google_id_token(db, id_token_jwt)
+    return user, session_token

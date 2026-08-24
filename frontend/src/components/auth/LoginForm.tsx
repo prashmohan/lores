@@ -1,59 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mail, ArrowRight, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { AuthConfigResponse, UserRead } from '../../types/api';
 
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        id?: {
-          initialize: (config: { client_id: string; callback: (res: { credential: string }) => void }) => void;
-          prompt: (momentListener?: (notification: unknown) => void) => void;
-          renderButton?: (parent: HTMLElement, options: Record<string, unknown>) => void;
-        };
-      };
-    };
-  }
-}
-
 interface LoginFormProps {
   onOtpRequested: (email: string) => void;
   onLoginSuccess?: (user?: UserRead) => void;
+  initialError?: string | null;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested, onLoginSuccess }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onOtpRequested,
+  onLoginSuccess: _onLoginSuccess,
+  initialError,
+}) => {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError || null);
   const [authConfig, setAuthConfig] = useState<AuthConfigResponse | null>(null);
 
-  const handleGoogleLogin = useCallback(
-    async (credential: string) => {
-      setError(null);
-      setLoading(true);
-      try {
-        const res = await api.auth.loginWithGoogle(credential);
-        if (onLoginSuccess) {
-          if (res.user) {
-            onLoginSuccess(res.user);
-          } else {
-            onLoginSuccess();
-          }
-        }
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Failed to sign in with Google. Please try again.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [onLoginSuccess]
-  );
+  useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,34 +33,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested, onLoginSuc
       .then((config) => {
         if (!isMounted) return;
         setAuthConfig(config);
-        if (config.google_auth_enabled && config.google_client_id) {
-          const initGsi = () => {
-            if (window.google?.accounts?.id) {
-              window.google.accounts.id.initialize({
-                client_id: config.google_client_id!,
-                callback: (response: { credential: string }) => {
-                  if (response?.credential) {
-                    handleGoogleLogin(response.credential);
-                  }
-                },
-              });
-            }
-          };
-
-          const existingScript = document.querySelector<HTMLScriptElement>(
-            'script[src="https://accounts.google.com/gsi/client"]'
-          );
-          if (!existingScript) {
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
-            script.onload = initGsi;
-            document.head.appendChild(script);
-          } else {
-            initGsi();
-          }
-        }
       })
       .catch(() => {
         // Gracefully ignore config fetch failures
@@ -98,17 +41,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested, onLoginSuc
     return () => {
       isMounted = false;
     };
-  }, [handleGoogleLogin]);
-
-  const handleGoogleClick = () => {
-    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
-      window.google.accounts.id.prompt();
-    } else if (import.meta.env.MODE === 'test') {
-      handleGoogleLogin('mock-google-credential');
-    } else {
-      setError('Google Sign-In could not be loaded. Please disable content blockers or continue with email.');
-    }
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,13 +97,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested, onLoginSuc
 
       {authConfig?.google_auth_enabled && (
         <div className="mb-6 space-y-6">
-          <button
-            type="button"
+          <a
+            href="/api/v1/auth/google/authorize"
             data-testid="google-sso-button"
-            onClick={handleGoogleClick}
-            disabled={loading}
             aria-label="Continue with Google"
-            className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 text-slate-800 font-bold text-sm transition-all shadow-xs hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
+            className="w-full py-3.5 px-4 rounded-2xl bg-white hover:bg-slate-50 active:bg-slate-100 border-2 border-slate-200 text-slate-800 font-bold text-sm transition-all shadow-xs hover:shadow-md flex items-center justify-center gap-3 cursor-pointer no-underline"
           >
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -191,7 +122,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onOtpRequested, onLoginSuc
               />
             </svg>
             <span>Continue with Google</span>
-          </button>
+          </a>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">

@@ -243,5 +243,40 @@ describe('App navigation and modals', () => {
       expect(node1.getAttribute('transform')).toContain('translate(777, 888)');
     });
   });
+
+  it('ingests token from URL query params on mount, stores in tokenStorage, cleans URL, and loads user data', async () => {
+    window.history.pushState({}, '', '/?token=oauth-test-token');
+    const setTokenSpy = vi.spyOn(tokenStorage, 'set');
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(setTokenSpy).toHaveBeenCalledWith('oauth-test-token');
+      expect(replaceStateSpy).toHaveBeenCalled();
+      expect(api.auth.getMe).toHaveBeenCalled();
+      expect(screen.getByRole('tab', { name: /Focus View/i })).toBeInTheDocument();
+    });
+  });
+
+  it('handles error query param from URL on mount, displays user-friendly error, and cleans URL', async () => {
+    window.history.pushState({}, '', '/?error=invalid_state');
+    vi.spyOn(tokenStorage, 'get').mockReturnValue(null);
+    vi.spyOn(api.auth, 'getConfig').mockResolvedValue({
+      google_client_id: null,
+      google_auth_enabled: false,
+    });
+    const replaceStateSpy = vi.spyOn(window.history, 'replaceState');
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(replaceStateSpy).toHaveBeenCalled();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Google Sign-In was cancelled or failed. Please try again or use email.'
+      );
+    });
+  });
 });
+
 

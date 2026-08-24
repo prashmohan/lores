@@ -1,6 +1,8 @@
 from typing import Any
+from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -28,6 +30,81 @@ def get_auth_config() -> dict[str, Any]:
         "google_client_id": settings.GOOGLE_CLIENT_ID,
         "google_auth_enabled": bool(settings.GOOGLE_CLIENT_ID),
     }
+
+
+@router.get("/google/authorize", response_class=RedirectResponse)
+def google_authorize(
+    request: Request,
+    redirect_target: str = "/",
+) -> RedirectResponse:
+    settings = get_settings()
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google SSO is not configured.",
+        )
+
+    state = auth_service.generate_oauth_state(redirect_target=redirect_target)
+    callback_url = (
+        f"{settings.APP_URL.rstrip('/')}/api/v1/auth/google/callback"
+        if settings.APP_URL
+        else f"{str(request.base_url).rstrip('/')}/api/v1/auth/google/callback"
+    )
+
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": callback_url,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "prompt": "select_account",
+        "access_type": "online",
+    }
+    google_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params, quote_via=quote)}"
+    )
+    return RedirectResponse(url=google_url, status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/google/callback", response_class=RedirectResponse)
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+) -> RedirectResponse:
+    if error or not code or not state:
+        return RedirectResponse(url="/?error=google_auth_failed", status_code=status.HTTP_302_FOUND)
+
+    try:
+        state_payload = auth_service.validate_oauth_state(state)
+    except ValueError:
+        return RedirectResponse(url="/?error=invalid_state", status_code=status.HTTP_302_FOUND)
+
+    settings = get_settings()
+    callback_url = (
+        f"{settings.APP_URL.rstrip('/')}/api/v1/auth/google/callback"
+        if settings.APP_URL
+        else f"{str(request.base_url).rstrip('/')}/api/v1/auth/google/callback"
+    )
+
+    try:
+        _user, session_token = await auth_service.exchange_google_code_for_user(
+            db, code=code, redirect_uri=callback_url
+        )
+    except (ValueError, Exception):  # noqa: BLE001
+        return RedirectResponse(
+            url="/?error=google_exchange_failed", status_code=status.HTTP_302_FOUND
+        )
+
+    db.commit()
+
+    raw_target = str(state_payload.get("target") or "/")
+    target = raw_target if raw_target.startswith("/") and not raw_target.startswith("//") else "/"
+    sep = "&" if "?" in target else "?"
+    frontend_redirect_url = f"{target}{sep}token={session_token}"
+    return RedirectResponse(url=frontend_redirect_url, status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/google", response_model=TokenResponse)

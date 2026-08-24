@@ -224,3 +224,15 @@ def test_auth_config_and_google_schemas():
     cfg_disabled = AuthConfigResponse(google_client_id=None, google_auth_enabled=False)
     assert cfg_disabled.google_auth_enabled is False
     assert cfg_disabled.google_client_id is None
+
+
+def test_google_client_secret_setting(monkeypatch):
+    from app.config import Settings
+
+    monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+    settings = Settings(_env_file=None)
+    assert settings.GOOGLE_CLIENT_SECRET is None
+
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret-12345")
+    settings_with_secret = Settings(_env_file=None)
+    assert settings_with_secret.GOOGLE_CLIENT_SECRET == "test-secret-12345"

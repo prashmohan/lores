@@ -228,8 +228,30 @@ export const App: React.FC = () => {
     }
   }, [initWorkspaceTree]);
 
-  // Check auth state on mount
+  // Check auth state on mount and inspect URL query parameters
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      const params = new URLSearchParams(window.location.search);
+      const urlToken = params.get('token');
+      const urlError = params.get('error');
+
+      if (urlToken) {
+        tokenStorage.set(urlToken);
+        params.delete('token');
+        const remainingSearch = params.toString() ? `?${params.toString()}` : '';
+        window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
+        loadUserData();
+        return;
+      }
+
+      if (urlError) {
+        params.delete('error');
+        const remainingSearch = params.toString() ? `?${params.toString()}` : '';
+        window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
+        setError('Google Sign-In was cancelled or failed. Please try again or use email.');
+      }
+    }
+
     const token = tokenStorage.get();
     if (token) {
       loadUserData();
@@ -618,7 +640,11 @@ export const App: React.FC = () => {
 
             {/* Right Hero Column: Auth Form */}
             <div className="lg:col-span-5 flex justify-center">
-              <LoginForm onOtpRequested={handleOtpRequested} onLoginSuccess={loadUserData} />
+              <LoginForm
+                onOtpRequested={handleOtpRequested}
+                onLoginSuccess={loadUserData}
+                initialError={error}
+              />
             </div>
           </div>
 

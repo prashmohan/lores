@@ -25,6 +25,7 @@ services:
       - SMTP_FROM_NAME=${SMTP_FROM_NAME:-${EMAILS_FROM_NAME:-Lores Family Tree}}
       - SMTP_TLS=${SMTP_TLS:-true}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
     volumes:
       - lores_data:/app/data
       - ./backend/app:/app/app

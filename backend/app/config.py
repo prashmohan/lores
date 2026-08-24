@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # Google OAuth / SSO Settings
     GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
 
     @property
     def cors_origins_list(self) -> list[str]:

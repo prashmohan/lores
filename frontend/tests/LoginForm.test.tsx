@@ -8,7 +8,6 @@ vi.mock('../src/lib/api', () => ({
     auth: {
       getConfig: vi.fn(),
       requestOtp: vi.fn(),
-      loginWithGoogle: vi.fn(),
     },
   },
 }));
@@ -18,7 +17,7 @@ describe('LoginForm with Google SSO', () => {
     vi.clearAllMocks();
   });
 
-  it('renders Google sign in button and divider when Google auth is enabled', async () => {
+  it('renders Google sign in link and divider when Google auth is enabled', async () => {
     vi.mocked(api.auth.getConfig).mockResolvedValueOnce({
       google_client_id: 'mock-client-id.apps.googleusercontent.com',
       google_auth_enabled: true,
@@ -27,7 +26,11 @@ describe('LoginForm with Google SSO', () => {
     render(<LoginForm onOtpRequested={vi.fn()} onLoginSuccess={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('google-sso-button')).toBeInTheDocument();
+      const googleLink = screen.getByTestId('google-sso-button');
+      expect(googleLink).toBeInTheDocument();
+      expect(googleLink.tagName).toBe('A');
+      expect(googleLink).toHaveAttribute('href', '/api/v1/auth/google/authorize');
+      expect(googleLink).toHaveAttribute('aria-label', 'Continue with Google');
       expect(screen.getByText(/or continue with email/i)).toBeInTheDocument();
     });
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
@@ -98,88 +101,25 @@ describe('LoginForm with Google SSO', () => {
     });
   });
 
-  it('handles Google sign in success and calls onLoginSuccess', async () => {
+  it('displays initialError when passed as prop', async () => {
     vi.mocked(api.auth.getConfig).mockResolvedValueOnce({
-      google_client_id: 'mock-client-id.apps.googleusercontent.com',
-      google_auth_enabled: true,
+      google_client_id: null,
+      google_auth_enabled: false,
     });
 
-    const mockUser = {
-      id: 'u-1',
-      email: 'googleuser@example.com',
-      display_name: 'Google User',
-      is_superadmin: false,
-    };
-
-    vi.mocked(api.auth.loginWithGoogle).mockResolvedValueOnce({
-      access_token: 'jwt-token',
-      token: 'jwt-token',
-      token_type: 'bearer',
-      user: mockUser,
-    });
-
-    const onLoginSuccess = vi.fn();
-    render(<LoginForm onOtpRequested={vi.fn()} onLoginSuccess={onLoginSuccess} />);
+    render(
+      <LoginForm
+        onOtpRequested={vi.fn()}
+        initialError="Google Sign-In was cancelled or failed. Please try again or use email."
+      />
+    );
 
     await waitFor(() => {
-      expect(screen.getByTestId('google-sso-button')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Google Sign-In was cancelled or failed. Please try again or use email.'
+      );
     });
-
-    fireEvent.click(screen.getByTestId('google-sso-button'));
-
-    await waitFor(() => {
-      expect(api.auth.loginWithGoogle).toHaveBeenCalled();
-      expect(onLoginSuccess).toHaveBeenCalledWith(mockUser);
-    });
-  });
-
-  it('displays error when Google sign in fails', async () => {
-    vi.mocked(api.auth.getConfig).mockResolvedValueOnce({
-      google_client_id: 'mock-client-id.apps.googleusercontent.com',
-      google_auth_enabled: true,
-    });
-
-    vi.mocked(api.auth.loginWithGoogle).mockRejectedValueOnce(new Error('Google token invalid or expired'));
-
-    render(<LoginForm onOtpRequested={vi.fn()} onLoginSuccess={vi.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('google-sso-button')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByTestId('google-sso-button'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Google token invalid or expired');
-    });
-  });
-
-  it('displays user-friendly error when Google Sign-In fails to load outside test environment', async () => {
-    const origMode = import.meta.env.MODE;
-    try {
-      (import.meta.env as Record<string, string>).MODE = 'production';
-
-      vi.mocked(api.auth.getConfig).mockResolvedValueOnce({
-        google_client_id: 'mock-client-id.apps.googleusercontent.com',
-        google_auth_enabled: true,
-      });
-
-      render(<LoginForm onOtpRequested={vi.fn()} onLoginSuccess={vi.fn()} />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('google-sso-button')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByTestId('google-sso-button'));
-
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toHaveTextContent(
-          'Google Sign-In could not be loaded. Please disable content blockers or continue with email.'
-        );
-      });
-    } finally {
-      (import.meta.env as Record<string, string>).MODE = origMode;
-    }
   });
 });
+
 

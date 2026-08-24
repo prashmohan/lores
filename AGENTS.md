@@ -111,7 +111,7 @@ npm run test:e2e:a11y
 ### 5.3 Code & Documentation Integrity
 - **Preserve Documentation**: Retain all docstrings, type annotations, and architectural comments unless specifically asked to update them.
 - **Strict Typing**: Maintain full TypeScript types for frontend APIs and strict Pydantic v2 schemas / SQLAlchemy models for backend services. Avoid using `any` in TypeScript or unannotated `def` in Python.
-- **Keep README.md Synchronized**: Whenever system capabilities, API endpoints, UI features, data exchange mechanisms, architecture, or test suites are added, modified, or extended, all agents and human contributors MUST update `README.md`. This includes updating key feature lists, monorepo directory trees, mermaid architecture/data flow diagrams, and test count metrics so that the project documentation always mirrors the true, current state of the codebase.
+- **Keep README.md Synchronized**: Whenever system capabilities, API endpoints, UI features, data exchange mechanisms, architecture, or test suites are added, modified, or extended, all agents and human contributors MUST update `README.md`. This includes updating key feature lists, monorepo directory trees, mermaid architecture/data flow diagrams, and testing layer coverage descriptions so that the project documentation always mirrors the true, current state of the codebase without tracking brittle test count metrics.
 
 ### 5.4 Mobile & Touch Accessibility Standards (WCAG 2.1 AAA)
 - **Target Size (WCAG 2.5.5 Level AAA & 2.5.8 Level AA)**: Every interactive control (buttons, icon links, form inputs, avatar edit triggers, drawer items) MUST provide a minimum tap target of $\ge 44 \times 44\text{px}$ with adequate perimeter spacing, preventing mis-taps.

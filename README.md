@@ -58,14 +58,14 @@ lores/
 │   │   ├── models/           # SQLAlchemy models (User, Workspace, Person, FamilyUnion, ChildRelationship, LoreNote, AuditLog)
 │   │   ├── schemas/          # Pydantic v2 validation & response schemas
 │   │   └── services/         # Business logic (cycle detection, neighborhood graph, audit ledger, auth, email, GEDCOM, data exchange)
-│   └── tests/                # Pytest async test suite (157 tests, 100% passing)
+│   └── tests/                # Pytest async test suite (unit, API integration, RBAC & security regression)
 ├── frontend/                 # React 18, TypeScript, Vite, Tailwind CSS, Radix UI, Lucide Icons
 │   ├── e2e/                  # Playwright E2E browser accessibility test suite
 │   ├── src/
 │   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin, interview)
 │   │   ├── lib/              # Type-safe API client, token storage, autocomplete helpers
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (168 tests across 20 suites)
+│   └── tests/                # Vitest + Vitest-Axe component unit & automated DOM accessibility test suites
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
 ├── stackhawk.yml             # DAST scanner configuration for local security remediation
@@ -278,15 +278,15 @@ Lores enforces rigorous automated quality gates before any code is committed.
 
 This executes all 7 verification steps:
 
-| Step | Scope | Tool | Checks / Standard |
+| Step | Scope | Tool | Verification Layer & Coverage Guarantees |
 | :--- | :--- | :--- | :--- |
-| **1** | Backend | `pytest` | **157** async unit & integration tests (100% pass) |
-| **2** | Backend | `ruff` | PEP 8 linting & formatting compliance (`ruff check .` & `ruff format --check .`) |
-| **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
-| **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
-| **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
-| **6** | Frontend | `vitest` + `axe` | **168** component unit & `vitest-axe` DOM accessibility audits (20 suites) |
-| **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
+| **1** | Backend | `pytest` | Async API routes, DAG cycle prevention, RBAC tenant isolation, GEDCOM data exchange, and security limits |
+| **2** | Backend | `ruff` | Strict PEP 8 linting, import sorting, and code formatting compliance (`ruff check .` & `ruff format --check .`) |
+| **3** | Backend | `mypy` | Strict static typing across all models, schemas, routers, and services (`mypy app`) |
+| **4** | Frontend | `eslint` | ESLint rules and `eslint-plugin-jsx-a11y` static accessibility checks |
+| **5** | Frontend | `tsc` + `vite` | Strict TypeScript compilation (`tsc -b`) and production bundle build (`vite build`) |
+| **6** | Frontend | `vitest` + `axe` | Component unit tests, user interaction flows, and automated `vitest-axe` DOM accessibility audits |
+| **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals, navigation routes, and touch flows |
 
 ---
 

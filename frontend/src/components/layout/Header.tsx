@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert, Users, Database, Menu, X } from 'lucide-react';
+import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert, Users, Database, Menu, X, Github } from 'lucide-react';
 import type { UserRead, UserWorkspaceMembership, WorkspaceRead } from '../../types/api';
 
 interface HeaderProps {
@@ -173,6 +173,19 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* Open Source GitHub Repository Link */}
+          <a
+            href="https://github.com/prashmohan/lores"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors min-h-[40px] min-w-[40px]"
+            title="View Open Source Repository on GitHub (opens in new tab)"
+            aria-label="View Open Source Repository on GitHub (opens in new tab)"
+          >
+            <Github className="w-4 h-4 text-slate-700" />
+            <span className="hidden xl:inline">GitHub</span>
+          </a>
+
           {/* High Contrast Toggle */}
           <button
             type="button"
@@ -306,6 +319,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Super Admin Dashboard</span>
               </button>
             )}
+
+            <a
+              href="https://github.com/prashmohan/lores"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold text-sm flex items-center gap-3 cursor-pointer transition-colors"
+              aria-label="View Open Source Repository on GitHub (opens in new tab)"
+            >
+              <Github className="w-5 h-5 text-slate-700 shrink-0" />
+              <span>GitHub Repository</span>
+            </a>
 
             <button
               type="button"

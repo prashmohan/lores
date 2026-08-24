@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   Heart,
   Lock,
+  Github,
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -522,9 +523,20 @@ export const App: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              <a
+                href="https://github.com/prashmohan/lores"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 text-xs font-bold text-slate-800 transition-colors shadow-2xs min-h-[36px]"
+                title="View Lores Open Source Repository on GitHub (opens in new tab)"
+                aria-label="View Open Source Repository on GitHub (opens in new tab)"
+              >
+                <Github className="w-4 h-4 text-slate-800" />
+                <span className="hidden xs:inline">GitHub</span>
+              </a>
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>100% Private & Open Source</span>
+                <span>100% Private</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-extrabold text-amber-900">
                 <Sparkles className="w-4 h-4 text-amber-600" />
@@ -735,8 +747,19 @@ export const App: React.FC = () => {
               <TreePine className="w-4 h-4 text-amber-600" />
               <span>Lores — Accessible, Multi-Tenant Family Tree & Oral Lore Archive</span>
             </div>
-            <div>
-              <span>Open Source & Community Centered</span>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://github.com/prashmohan/lores"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-slate-700 hover:text-slate-950 font-bold transition-colors underline decoration-slate-300 hover:decoration-slate-900"
+                aria-label="View Open Source Repository on GitHub (opens in new tab)"
+              >
+                <Github className="w-4 h-4" />
+                <span>GitHub Repository</span>
+              </a>
+              <span>•</span>
+              <span>MIT License</span>
             </div>
           </div>
         </footer>
@@ -953,6 +976,30 @@ export const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Authenticated Bottom Footer */}
+      <footer className="w-full border-t border-slate-200/80 bg-white/60 py-3 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-2xs text-slate-500 font-medium">
+          <div className="flex items-center gap-1.5">
+            <TreePine className="w-3.5 h-3.5 text-amber-600" />
+            <span>Lores Family Tree</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/prashmohan/lores"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-950 font-semibold transition-colors"
+              aria-label="View Open Source Repository on GitHub (opens in new tab)"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span>Open Source on GitHub</span>
+            </a>
+            <span>•</span>
+            <span>MIT License</span>
+          </div>
+        </div>
+      </footer>
 
       {/* Standard Add Relative Modal */}
       <AddRelativeModal

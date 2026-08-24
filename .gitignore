@@ -38,3 +38,12 @@ blob-report/
 .DS_Store
 .vscode/
 .idea/
+
+# Security scan artifacts & reports
+.hawk/
+*.sarif
+scan-reports/
+
+# Agent skills
+!.agent/
+!.agent/skills/

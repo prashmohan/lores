@@ -1,0 +1,16 @@
+# StackHawk Configuration
+# Documentation: https://docs.stackhawk.com/hawkscan/configuration/
+
+app:
+  # Unique application ID (supplied via HAWK_APPLICATION_ID or APP_ID in .env / CI)
+  applicationId: ${HAWK_APPLICATION_ID:${APP_ID}}
+  env: ${HAWK_ENV:Development}
+  host: ${HAWK_HOST:http://localhost:8156}
+
+  # OpenAPI configuration for automated endpoint discovery
+  openApi:
+    filePath: /openapi.json
+
+hawk:
+  spider:
+    maxDurationMinutes: 5

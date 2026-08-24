@@ -76,6 +76,36 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
     hasMoved: boolean;
   } | null>(null);
 
+  // Multi-touch gestures & single-finger guidance toast state
+  const multiTouchRef = useRef<{
+    midpoint: { x: number; y: number };
+    distance: number;
+    startZoom: number;
+    startPan: { x: number; y: number };
+  } | null>(null);
+  const singleTouchRef = useRef<{ x: number; y: number; triggered: boolean } | null>(null);
+  const [showTouchToast, setShowTouchToast] = useState(false);
+  const touchToastTimerRef = useRef<NodeJS.Timeout | number | null>(null);
+
+  const triggerTouchGuidanceToast = () => {
+    setShowTouchToast(true);
+    if (touchToastTimerRef.current) {
+      clearTimeout(touchToastTimerRef.current);
+    }
+    touchToastTimerRef.current = setTimeout(() => {
+      setShowTouchToast(false);
+      touchToastTimerRef.current = null;
+    }, 1500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (touchToastTimerRef.current) {
+        clearTimeout(touchToastTimerRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setCustomPositions(serverPositions || {});
     latestCustomPositionsRef.current = serverPositions || {};
@@ -1003,6 +1033,115 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
     };
   }, [zoom, onSavePositions]);
 
+  // Multi-touch gestures (2-finger pan & pinch-zoom, 1-finger guidance toast)
+  const handleCanvasTouchStart = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const midpoint = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2,
+      };
+      const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      multiTouchRef.current = {
+        midpoint,
+        distance,
+        startZoom: zoom,
+        startPan: { ...pan },
+      };
+      singleTouchRef.current = null;
+    } else if (e.touches.length === 1) {
+      multiTouchRef.current = null;
+      singleTouchRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        triggered: false,
+      };
+    }
+  };
+
+  const handleCanvasTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 2) {
+      e.preventDefault?.();
+      if (!multiTouchRef.current) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const midpoint = {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2,
+        };
+        const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        multiTouchRef.current = {
+          midpoint,
+          distance,
+          startZoom: zoom,
+          startPan: { ...pan },
+        };
+        singleTouchRef.current = null;
+        return;
+      }
+
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentMidpoint = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2,
+      };
+      const currentDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+
+      const { midpoint: startMidpoint, distance: startDistance, startZoom, startPan } = multiTouchRef.current;
+
+      const scaleRatio = startDistance > 0 ? currentDistance / startDistance : 1;
+      const newZoom = Math.min(Math.max(startZoom * scaleRatio, 0.4), 3.0);
+
+      // Invariant world coordinates under initial midpoint:
+      const wx = (startMidpoint.x - startPan.x) / startZoom;
+      const wy = (startMidpoint.y - startPan.y) / startZoom;
+
+      const newPanX = currentMidpoint.x - wx * newZoom;
+      const newPanY = currentMidpoint.y - wy * newZoom;
+
+      setZoom(newZoom);
+      setPan({ x: newPanX, y: newPanY });
+    } else if (e.touches.length === 1 && singleTouchRef.current) {
+      const touch = e.touches[0];
+      const delta = Math.hypot(touch.clientX - singleTouchRef.current.x, touch.clientY - singleTouchRef.current.y);
+      if (!singleTouchRef.current.triggered && delta > 10) {
+        singleTouchRef.current.triggered = true;
+        triggerTouchGuidanceToast();
+      }
+    }
+  };
+
+  const handleCanvasTouchEnd = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const midpoint = {
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2,
+      };
+      const distance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      multiTouchRef.current = {
+        midpoint,
+        distance,
+        startZoom: zoom,
+        startPan: { ...pan },
+      };
+      singleTouchRef.current = null;
+    } else if (e.touches.length === 1) {
+      multiTouchRef.current = null;
+      singleTouchRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        triggered: false,
+      };
+    } else {
+      multiTouchRef.current = null;
+      singleTouchRef.current = null;
+    }
+  };
+
   return (
     <div
       role="region"
@@ -1092,6 +1231,10 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onTouchStart={handleCanvasTouchStart}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
+          onTouchCancel={handleCanvasTouchEnd}
         >
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
             {/* Background Grid Pattern */}
@@ -1385,6 +1528,18 @@ export const BirdseyeMapCanvas: React.FC<BirdseyeMapCanvasProps> = ({
             </div>
           );
         })()
+      )}
+
+      {/* Floating Touch Guidance Toast */}
+      {showTouchToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-testid="map-touch-toast"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-slate-900/90 backdrop-blur-md text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700 pointer-events-none transition-opacity duration-300 animate-in fade-in"
+        >
+          Use two fingers to pan and zoom the map
+        </div>
       )}
     </div>
   );

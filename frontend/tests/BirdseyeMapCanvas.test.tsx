@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, createEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { BirdseyeMapCanvas, type MapPerson } from '../src/components/map/BirdseyeMapCanvas';
 
@@ -868,6 +868,97 @@ describe('BirdseyeMapCanvas', () => {
     const toolbarImg = within(toolbar).getByRole('img', { name: 'Arthur Miller' });
     expect(toolbarImg).toBeInTheDocument();
     expect(toolbarImg).toHaveAttribute('src', 'data:image/jpeg;base64,mapavatar1');
+  });
+
+  describe('Multi-Touch Canvas Gestures & Guidance Toast', () => {
+    it('updates canvas pan and zoom proportionally on 2-finger touchstart and touchmove', () => {
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+
+      const svg = screen.getByLabelText('Family tree pedigree chart');
+      const mainGroup = svg.querySelector('g')!;
+
+      // Initial transform
+      expect(mainGroup.getAttribute('transform')).toBe('translate(0, 0) scale(1)');
+
+      // 2 fingers down: (100, 100) and (200, 100) -> centroid (150, 100), distance 100
+      fireEvent.touchStart(svg, {
+        touches: [
+          { clientX: 100, clientY: 100 },
+          { clientX: 200, clientY: 100 },
+        ],
+      });
+
+      // 2 fingers move (pinch zoom x2, centered at 150, 100): (50, 100) and (250, 100) -> centroid (150, 100), distance 200
+      const moveEvent = createEvent.touchMove(svg, {
+        touches: [
+          { clientX: 50, clientY: 100 },
+          { clientX: 250, clientY: 100 },
+        ],
+      });
+      const preventDefaultSpy = vi.spyOn(moveEvent, 'preventDefault');
+      fireEvent(svg, moveEvent);
+
+      // Verify preventDefault was called on 2-finger move
+      expect(preventDefaultSpy).toHaveBeenCalled();
+
+      // Transform should be translate(-150, -100) scale(2)
+      expect(mainGroup.getAttribute('transform')).toBe('translate(-150, -100) scale(2)');
+
+      // 2 fingers move further with pan: (100, 150) and (300, 150) -> centroid (200, 150), distance 200
+      fireEvent.touchMove(svg, {
+        touches: [
+          { clientX: 100, clientY: 150 },
+          { clientX: 300, clientY: 150 },
+        ],
+      });
+
+      // New pan: 200 - 150 * 2 = -100, 150 - 100 * 2 = -50
+      expect(mainGroup.getAttribute('transform')).toBe('translate(-100, -50) scale(2)');
+
+      // Touch end
+      fireEvent.touchEnd(svg, { touches: [] });
+    });
+
+    it('displays 1-finger guidance toast on canvas background movement >10px and auto-hides after 1.5s', () => {
+      vi.useFakeTimers();
+
+      render(<BirdseyeMapCanvas people={mockPeople} />);
+      const svg = screen.getByLabelText('Family tree pedigree chart');
+
+      // 1 finger down at (100, 100)
+      fireEvent.touchStart(svg, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+
+      // Move <= 10px (e.g. 5px) -> toast should NOT be displayed
+      const smallMoveEvent = createEvent.touchMove(svg, {
+        touches: [{ clientX: 105, clientY: 100 }],
+      });
+      const smallSpy = vi.spyOn(smallMoveEvent, 'preventDefault');
+      fireEvent(svg, smallMoveEvent);
+      expect(screen.queryByText(/Use two fingers to pan and zoom the map/i)).not.toBeInTheDocument();
+      // 1-finger move must NOT preventDefault (allowing normal page scroll)
+      expect(smallSpy).not.toHaveBeenCalled();
+
+      // Move > 10px (e.g. +20px) -> toast should appear
+      const largeMoveEvent = createEvent.touchMove(svg, {
+        touches: [{ clientX: 120, clientY: 100 }],
+      });
+      const largeSpy = vi.spyOn(largeMoveEvent, 'preventDefault');
+      fireEvent(svg, largeMoveEvent);
+      expect(screen.getByText(/Use two fingers to pan and zoom the map/i)).toBeInTheDocument();
+      expect(largeSpy).not.toHaveBeenCalled();
+
+      // Fast forward time by 1500ms
+      act(() => {
+        vi.advanceTimersByTime(1500);
+      });
+
+      // Toast should disappear
+      expect(screen.queryByText(/Use two fingers to pan and zoom the map/i)).not.toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
   });
 });
 

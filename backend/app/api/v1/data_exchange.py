@@ -14,11 +14,14 @@ from app.services import data_exchange_service, gedcom_service
 
 router = APIRouter()
 
+MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25 MB maximum upload limit
+
 
 def _sanitize_filename(name: str) -> str:
     """Sanitizes workspace name for safe use in Content-Disposition filename header."""
-    cleaned = re.sub(r"[^\w\-_.]+", "_", name.strip())
-    return cleaned.strip("_") or "export"
+    cleaned = re.sub(r"[^\w\-.]+", "_", name.strip())
+    cleaned = re.sub(r"_+", "_", cleaned).strip("._")
+    return cleaned or "export"
 
 
 @router.get("/{workspace_id}/export/gedcom")
@@ -77,7 +80,14 @@ async def import_gedcom(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file uploaded")
 
     try:
-        raw_bytes = await file.read()
+        raw_bytes = await file.read(MAX_UPLOAD_SIZE + 1)
+        if len(raw_bytes) > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Uploaded GEDCOM file exceeds maximum size of 25MB",
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to read file: {e}"
@@ -128,7 +138,14 @@ async def import_json(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file uploaded")
 
     try:
-        raw_bytes = await file.read()
+        raw_bytes = await file.read(MAX_UPLOAD_SIZE + 1)
+        if len(raw_bytes) > MAX_UPLOAD_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Uploaded JSON file exceeds maximum size of 25MB",
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to read file: {e}"

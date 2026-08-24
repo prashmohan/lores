@@ -79,6 +79,9 @@ def request_otp(
     return auth_token, raw_otp
 
 
+_DUMMY_BCRYPT_HASH = "$2b$12$e8Y6/5M5p4m/5dG5wQyQeeVbZ81ZpA.Jq8uM2W3w2bZ81ZpA.Jq8u"
+
+
 def verify_otp(db: Session, email: str, code: str) -> tuple[User, str]:
     """Verify an active numeric OTP code and issue a JWT session token."""
     clean_email = email.lower().strip()
@@ -95,6 +98,8 @@ def verify_otp(db: Session, email: str, code: str) -> tuple[User, str]:
 
     tokens = list(db.scalars(stmt).all())
     if not tokens:
+        # Constant-time dummy verification to mitigate timing-based account enumeration
+        pwd_context.verify(code, _DUMMY_BCRYPT_HASH)
         raise ValueError("Invalid or expired authentication code")
 
     valid_token: MagicAuthToken | None = None

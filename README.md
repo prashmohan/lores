@@ -27,7 +27,13 @@ Traditional genealogy software often overwhelms families with sprawling, tangled
 - 🌿 **1-Hop Focus Neighborhood**: Rather than displaying infinite tangled tree canvases, Lores centers the user on a single **Focus Person** with their immediate parents, partners, siblings, and children displayed in legible, high-contrast cards. Easily pivot focus with a single click, add relatives with automatic union wiring, connect dual parents, and link existing relatives.
 - 📸 **Portrait Photos & Face Cropping**: Upload portrait photos with an interactive web-based cropping tool featuring 2D panning, zoom sliders (100%–300%), and automatic Base64 canvas optimization. Avatars render cleanly in both Focus cards and Bird's-Eye SVG map nodes with graceful fallback to initials.
 - 🎙️ **Oral Lore & Storytelling**: Attach voice recordings, milestone stories, recipes, and personal anecdotes directly to family members. Includes a **Guided Interview Modal** with structured prompts to spark intergenerational storytelling.
-- 🗺️ **Bird's-Eye SVG Map & Custom Layouts**: Multi-generational pedigree map with smooth zoom/pan (10%–300%), bundled partner and parent-child edges, interactive person inspection, drag-and-drop manual node positioning persisted per workspace, and auto-layout reset.
+- 🗺️ **Bird's-Eye SVG Map & Fullscreen Mode**: Multi-generational pedigree map with smooth zoom/pan (40%–300%), bundled partner and parent-child edges with crossing jump arcs, interactive person inspection, drag-and-drop manual node positioning persisted per workspace, 1-click fullscreen immersion mode with keyboard shortcut (`Esc`), and auto-layout reset.
+- 📱 **Mobile Multi-Touch Gestures & Ergonomics**: Built from the ground up for phone and tablet touchscreens:
+  - **2-Finger Canvas Pan & Pinch-to-Zoom**: Fluid multi-touch canvas panning and focal-point-stabilized zooming with geometric world-coordinate preservation.
+  - **Long-Press Node Drag-and-Drop**: Intuitive 250ms hold-to-lift gesture with haptic vibration feedback (`navigator.vibrate(40)`) preventing accidental node repositioning during page scrolling.
+  - **Single-Finger Guidance Toast**: Helpful floating toast ("*Use two fingers to pan and zoom the map*") guiding single-finger map swipes.
+  - **Header Mobile Navigation Drawer**: Responsive slide-down drawer housing workspace switching, member management, data backups, and high contrast toggle with click-outside and `Escape` key dismissal.
+  - **$\ge 44 \times 44\text{px}$ Touch Targets**: All interactive controls, dialog buttons, and bottom action sheets adhere to strict WCAG 2.1 AAA touch target dimensions.
 - 📦 **Universal GEDCOM 5.5.1/7.0 & Lossless JSON Portability**: Full data sovereignty with standard `.ged` file export/import (compatible with GrampsWeb, Gramps, Ancestry, and FamilySearch) featuring smart deduplication and cycle prevention, plus complete workspace JSON backup and restore.
 - 🔒 **Living Relative Privacy**: Living relatives have sensitive details automatically redacted for guest and unauthorized viewers.
 - ↩️ **30-Day Family Safety Net**: Every change is recorded in an immutable append-only audit trail with JSON diffs. Deleted relatives and stories are held in a **30-day Family Trash Can** with 1-click restore and permanent purge capabilities.
@@ -58,7 +64,7 @@ lores/
 │   │   ├── components/       # UI Components (auth, layout, tree, map, history, workspace, admin, interview)
 │   │   ├── lib/              # Type-safe API client, token storage, autocomplete helpers
 │   │   └── types/            # TypeScript interfaces matching backend DTO schemas
-│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (160 tests across 19 suites)
+│   └── tests/                # Vitest + Vitest-Axe component accessibility tests (162 tests across 19 suites)
 ├── docs/                     # Architectural design specifications and implementation plans
 ├── scripts/                  # Automated verification and quality gate scripts
 └── docker-compose.yml        # Multi-stage production and development container orchestrations
@@ -70,7 +76,8 @@ lores/
 flowchart TD
     subgraph Client["Frontend Client (React 18 + TypeScript + Vite + Tailwind + Radix UI)"]
         UI_Focus["Focus View (1-Hop Neighborhood, Person Cards, Autocomplete)"]
-        UI_Map["Bird's-Eye SVG Map (Zoom/Pan, Edge Bundling, Drag Layout)"]
+        UI_Map["Bird's-Eye SVG Map (2-Finger Pan/Zoom, Long-Press Drag, Fullscreen)"]
+        UI_Header["Header & Mobile Drawer (Touch Ergonomics, WCAG AAA)"]
         UI_Photo["Photo Crop Tool (Interactive Pan, Zoom Slider, Base64 JPEG)"]
         UI_Lore["Oral Lore & Guided Storytelling Modals"]
         UI_Admin["Admin Modals (Data Backup & Portability, Family Members & RBAC, Super Admin)"]
@@ -276,7 +283,7 @@ This executes all 7 verification steps:
 | **3** | Backend | `mypy` | Strict static type validation (`mypy app`) |
 | **4** | Frontend | `eslint` | ESLint + `eslint-plugin-jsx-a11y` accessibility rules |
 | **5** | Frontend | `tsc` + `vite` | TypeScript strict compilation & production build bundle (`npm run build`) |
-| **6** | Frontend | `vitest` + `axe` | **160** component unit & `vitest-axe` DOM accessibility audits (19 suites) |
+| **6** | Frontend | `vitest` + `axe` | **162** component unit & `vitest-axe` DOM accessibility audits (19 suites) |
 | **7** | Frontend | `playwright` | E2E browser axe-core audits across all active modals & views |
 
 ---
@@ -284,11 +291,12 @@ This executes all 7 verification steps:
 ## 6. Human-Centered & Accessible UX Principles
 
 1. **Low Cognitive Load**: Focus on one family member at a time. Clear, step-by-step navigation replaces confusing sprawling charts.
-2. **Generous Touch & Click Targets**: All interactive elements adhere to minimum $\ge 44 \times 44\text{px}$ targets.
-3. **High-Contrast Support**: Built-in High Contrast toggle enforcing bold borders, pitch-black typography, and high-visibility focus indicators (targeting WCAG 2.1 AAA).
-4. **Inclusive, Clear Language**: Replaces technical genealogical jargon with intuitive words like *"Parents"*, *"Partners"*, *"Children"*, and *"Stories"*.
-5. **Psychological Safety**: Destructive actions can be undone with 1-click restore from the 30-day Family Trash Can.
-6. **Data Portability & Sovereignty**: Families always own their data and can export/import universal GEDCOM and lossless JSON archives anytime.
+2. **Generous Touch & Click Targets**: All interactive elements adhere to minimum $\ge 44 \times 44\text{px}$ touch targets across mobile action sheets, navigation drawers, and dialogs.
+3. **Multi-Touch & Mobile Ergonomics**: Native 2-finger panning, stabilized pinch-to-zoom, 250ms long-press node lifting with haptic feedback, and contextual gesture guidance overlays prevent accidental canvas interactions.
+4. **High-Contrast Support**: Built-in High Contrast toggle enforcing bold borders, pitch-black typography, and high-visibility focus indicators (targeting WCAG 2.1 AAA).
+5. **Inclusive, Clear Language**: Replaces technical genealogical jargon with intuitive words like *"Parents"*, *"Partners"*, *"Children"*, and *"Stories"*.
+6. **Psychological Safety**: Destructive actions can be undone with 1-click restore from the 30-day Family Trash Can.
+7. **Data Portability & Sovereignty**: Families always own their data and can export/import universal GEDCOM and lossless JSON archives anytime.
 
 ---
 

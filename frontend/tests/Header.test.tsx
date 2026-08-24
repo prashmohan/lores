@@ -407,5 +407,50 @@ describe('Header', () => {
     expect(onOpenSuperAdmin).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
   });
+
+  it('dismisses mobile drawer when Escape key is pressed', () => {
+    render(
+      <Header
+        currentUser={mockUser}
+        workspaces={mockMemberships}
+        currentWorkspace={mockWorkspace}
+        onSelectWorkspace={vi.fn()}
+        onLogout={vi.fn()}
+        highContrast={false}
+        onToggleHighContrast={vi.fn()}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    fireEvent.click(toggleBtn);
+    expect(screen.getByTestId('mobile-nav-menu')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
+
+  it('dismisses mobile drawer when clicking outside the header', () => {
+    render(
+      <div>
+        <div data-testid="outside-area">Outside</div>
+        <Header
+          currentUser={mockUser}
+          workspaces={mockMemberships}
+          currentWorkspace={mockWorkspace}
+          onSelectWorkspace={vi.fn()}
+          onLogout={vi.fn()}
+          highContrast={false}
+          onToggleHighContrast={vi.fn()}
+        />
+      </div>
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /Open mobile navigation menu/i });
+    fireEvent.click(toggleBtn);
+    expect(screen.getByTestId('mobile-nav-menu')).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByTestId('outside-area'));
+    expect(screen.queryByTestId('mobile-nav-menu')).not.toBeInTheDocument();
+  });
 });
 

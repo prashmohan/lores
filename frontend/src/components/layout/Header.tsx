@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TreePine, Sun, Moon, LogOut, ChevronDown, User as UserIcon, Plus, ShieldAlert, Users, Database, Menu, X } from 'lucide-react';
 import type { UserRead, UserWorkspaceMembership, WorkspaceRead } from '../../types/api';
 
@@ -32,11 +32,38 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleHighContrast,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
   const canManageMembers = userRole === 'admin' || userRole === 'owner' || currentUser?.is_superadmin;
   const canManageData = userRole === 'admin' || userRole === 'owner' || currentUser?.is_superadmin;
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [mobileMenuOpen]);
+
   return (
-    <header className="bg-white border-b-2 border-slate-200 px-3 sm:px-8 py-2 sm:py-3 sticky top-0 z-30 shadow-sm relative">
+    <header ref={headerRef} className="bg-white border-b-2 border-slate-200 px-3 sm:px-8 py-2 sm:py-3 sticky top-0 z-30 shadow-sm relative">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 h-11 sm:h-12">
         {/* Brand & Workspace Controls */}
         <div className="flex items-center gap-2 sm:gap-6 min-w-0 flex-nowrap">

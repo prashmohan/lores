@@ -208,11 +208,12 @@ def _verify_google_token_payload(id_token: str, client_id: str) -> dict[str, Any
 
 def verify_google_id_token(db: Session, id_token: str) -> tuple[User, str]:
     """Verify a Google ID token and return/provision the User and a Lores JWT session."""
-    if not settings.GOOGLE_CLIENT_ID:
+    current_settings = get_settings()
+    if not current_settings.GOOGLE_CLIENT_ID:
         raise ValueError("Google SSO is not configured on this server")
 
     try:
-        payload = _verify_google_token_payload(id_token, settings.GOOGLE_CLIENT_ID)
+        payload = _verify_google_token_payload(id_token, current_settings.GOOGLE_CLIENT_ID)
     except Exception as e:
         if isinstance(e, ValueError):
             raise

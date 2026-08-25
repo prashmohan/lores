@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from urllib.parse import quote, urlencode
 
@@ -19,6 +20,8 @@ from app.schemas.auth import (
     UserRead,
 )
 from app.services import auth_service, email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -66,6 +69,7 @@ def google_authorize(
     return RedirectResponse(url=google_url, status_code=status.HTTP_302_FOUND)
 
 
+
 @router.get("/google/callback", response_class=RedirectResponse)
 async def google_callback(
     request: Request,
@@ -74,13 +78,31 @@ async def google_callback(
     error: str | None = None,
     db: Session = Depends(get_db),
 ) -> RedirectResponse:
-    if error or not code or not state:
-        return RedirectResponse(url="/?error=google_auth_failed", status_code=status.HTTP_302_FOUND)
+    if error:
+        logger.warning("Google OAuth callback received error: %s", error)
+        return RedirectResponse(
+            url=f"/?error={quote(f'google_auth_failed: {error}')}",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    if not code or not state:
+        logger.warning(
+            "Google OAuth callback missing parameter(s): code=%s, state=%s",
+            bool(code),
+            bool(state),
+        )
+        return RedirectResponse(
+            url="/?error=google_auth_failed", status_code=status.HTTP_302_FOUND
+        )
 
     try:
         state_payload = auth_service.validate_oauth_state(state)
-    except ValueError:
-        return RedirectResponse(url="/?error=invalid_state", status_code=status.HTTP_302_FOUND)
+    except ValueError as exc:
+        logger.warning("Google OAuth state validation failed: %s", exc)
+        return RedirectResponse(
+            url=f"/?error={quote(f'invalid_state: {exc}')}",
+            status_code=status.HTTP_302_FOUND,
+        )
 
     settings = get_settings()
     callback_url = (
@@ -93,9 +115,13 @@ async def google_callback(
         _user, session_token = await auth_service.exchange_google_code_for_user(
             db, code=code, redirect_uri=callback_url
         )
-    except (ValueError, Exception):  # noqa: BLE001
+    except Exception as exc:
+        logger.exception(
+            "Google OAuth code exchange failed (callback_url=%s): %s", callback_url, exc
+        )
         return RedirectResponse(
-            url="/?error=google_exchange_failed", status_code=status.HTTP_302_FOUND
+            url=f"/?error={quote(f'google_exchange_failed: {exc}')}",
+            status_code=status.HTTP_302_FOUND,
         )
 
     db.commit()

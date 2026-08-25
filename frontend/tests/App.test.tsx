@@ -273,7 +273,7 @@ describe('App navigation and modals', () => {
     await waitFor(() => {
       expect(replaceStateSpy).toHaveBeenCalled();
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Google Sign-In was cancelled or failed. Please try again or use email.'
+        'Google Sign-In error: invalid_state. Please try again or use email.'
       );
     });
   });

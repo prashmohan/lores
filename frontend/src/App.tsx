@@ -248,7 +248,14 @@ export const App: React.FC = () => {
         params.delete('error');
         const remainingSearch = params.toString() ? `?${params.toString()}` : '';
         window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
-        setError('Google Sign-In was cancelled or failed. Please try again or use email.');
+        const decodedError = decodeURIComponent(urlError);
+        setError(
+          decodedError.startsWith('google_auth_failed') ||
+          decodedError.startsWith('invalid_state') ||
+          decodedError.startsWith('google_exchange_failed')
+            ? `Google Sign-In error: ${decodedError}. Please try again or use email.`
+            : decodedError
+        );
       }
     }
 

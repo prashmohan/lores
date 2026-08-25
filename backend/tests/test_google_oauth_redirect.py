@@ -434,24 +434,24 @@ def test_api_google_callback_with_error_query_param(client):
         "/api/v1/auth/google/callback?error=access_denied", follow_redirects=False
     )
     assert response.status_code == 302
-    assert response.headers["location"] == "/?error=google_auth_failed"
+    assert "google_auth_failed" in response.headers["location"]
 
 
 def test_api_google_callback_missing_code_or_state(client):
     # Missing all
     resp1 = client.get("/api/v1/auth/google/callback", follow_redirects=False)
     assert resp1.status_code == 302
-    assert resp1.headers["location"] == "/?error=google_auth_failed"
+    assert "google_auth_failed" in resp1.headers["location"]
 
     # Missing state
     resp2 = client.get("/api/v1/auth/google/callback?code=mock_code", follow_redirects=False)
     assert resp2.status_code == 302
-    assert resp2.headers["location"] == "/?error=google_auth_failed"
+    assert "google_auth_failed" in resp2.headers["location"]
 
     # Missing code
     resp3 = client.get("/api/v1/auth/google/callback?state=mock_state", follow_redirects=False)
     assert resp3.status_code == 302
-    assert resp3.headers["location"] == "/?error=google_auth_failed"
+    assert "google_auth_failed" in resp3.headers["location"]
 
 
 def test_api_google_callback_invalid_or_expired_state(client):
@@ -461,7 +461,7 @@ def test_api_google_callback_invalid_or_expired_state(client):
         follow_redirects=False,
     )
     assert resp1.status_code == 302
-    assert resp1.headers["location"] == "/?error=invalid_state"
+    assert "invalid_state" in resp1.headers["location"]
 
     # Expired state
     settings = get_settings()
@@ -478,7 +478,7 @@ def test_api_google_callback_invalid_or_expired_state(client):
         f"/api/v1/auth/google/callback?code=mock_code&state={expired_state}", follow_redirects=False
     )
     assert resp2.status_code == 302
-    assert resp2.headers["location"] == "/?error=invalid_state"
+    assert "invalid_state" in resp2.headers["location"]
 
 
 def test_api_google_callback_exchange_failure(client):
@@ -493,7 +493,7 @@ def test_api_google_callback_exchange_failure(client):
             follow_redirects=False,
         )
         assert response.status_code == 302
-        assert response.headers["location"] == "/?error=google_exchange_failed"
+        assert "google_exchange_failed" in response.headers["location"]
 
 
 def test_api_google_callback_success_default_target(client):

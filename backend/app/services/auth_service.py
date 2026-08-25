@@ -166,7 +166,9 @@ def decode_token(token: str) -> dict[str, Any]:
 _google_jwks_cache: dict[str, Any] = {"keys": [], "expires_at": 0.0}
 
 
-def _verify_google_token_payload(id_token: str, client_id: str) -> dict[str, Any]:
+def _verify_google_token_payload(
+    id_token: str, client_id: str, access_token: str | None = None
+) -> dict[str, Any]:
     """Verify Google ID token against Google's public JWKS certs."""
     # 1. Fetch unverified header to get kid
     unverified_header = jwt.get_unverified_header(id_token)
@@ -202,18 +204,24 @@ def _verify_google_token_payload(id_token: str, client_id: str) -> dict[str, Any
         algorithms=["RS256"],
         audience=client_id,
         issuer=["accounts.google.com", "https://accounts.google.com"],
+        options={"verify_at_hash": False},
+        access_token=access_token,
     )
     return payload
 
 
-def verify_google_id_token(db: Session, id_token: str) -> tuple[User, str]:
+def verify_google_id_token(
+    db: Session, id_token: str, access_token: str | None = None
+) -> tuple[User, str]:
     """Verify a Google ID token and return/provision the User and a Lores JWT session."""
     current_settings = get_settings()
     if not current_settings.GOOGLE_CLIENT_ID:
         raise ValueError("Google SSO is not configured on this server")
 
     try:
-        payload = _verify_google_token_payload(id_token, current_settings.GOOGLE_CLIENT_ID)
+        payload = _verify_google_token_payload(
+            id_token, current_settings.GOOGLE_CLIENT_ID, access_token=access_token
+        )
     except Exception as e:
         if isinstance(e, ValueError):
             raise
@@ -301,8 +309,9 @@ async def exchange_google_code_for_user(
 
     data = response.json()
     id_token_jwt = data.get("id_token")
+    access_token = data.get("access_token")
     if not id_token_jwt:
         raise ValueError("Google did not return an id_token")
 
-    user, session_token = verify_google_id_token(db, id_token_jwt)
+    user, session_token = verify_google_id_token(db, id_token_jwt, access_token=access_token)
     return user, session_token

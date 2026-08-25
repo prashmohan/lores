@@ -533,3 +533,59 @@ def test_api_google_callback_success_custom_target_with_query_params(client):
             response.headers["location"]
             == "/workspace/123/tree?focus=456&token=mock_jwt_session_token_xyz"
         )
+
+
+def test_verify_google_token_payload_with_at_hash_claim():
+    from unittest.mock import MagicMock
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from app.services.auth_service import _verify_google_token_payload
+
+    # Generate test RSA key pair
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
+
+    client_id = "test-client-id.apps.googleusercontent.com"
+    payload = {
+        "iss": "https://accounts.google.com",
+        "aud": client_id,
+        "email": "test@example.com",
+        "email_verified": True,
+        "at_hash": "mock_at_hash_value",
+        "exp": int(time.time()) + 3600,
+    }
+    token = jwt.encode(
+        payload,
+        private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        ).decode("utf-8"),
+        algorithm="RS256",
+        headers={"kid": "test-kid"},
+    )
+
+    mock_jwk = MagicMock()
+    mock_jwk.to_pem.return_value = public_pem.encode("utf-8")
+
+    with (
+        patch("jose.jwt.get_unverified_header", return_value={"kid": "test-kid"}),
+        patch("httpx.get") as mock_get,
+        patch("jose.jwk.construct", return_value=mock_jwk),
+    ):
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {"keys": [{"kid": "test-kid", "kty": "RSA"}]},
+        )
+        result = _verify_google_token_payload(token, client_id)
+        assert result["email"] == "test@example.com"
+        assert result["at_hash"] == "mock_at_hash_value"

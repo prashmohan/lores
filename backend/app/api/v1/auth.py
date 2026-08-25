@@ -69,7 +69,6 @@ def google_authorize(
     return RedirectResponse(url=google_url, status_code=status.HTTP_302_FOUND)
 
 
-
 @router.get("/google/callback", response_class=RedirectResponse)
 async def google_callback(
     request: Request,
@@ -91,9 +90,7 @@ async def google_callback(
             bool(code),
             bool(state),
         )
-        return RedirectResponse(
-            url="/?error=google_auth_failed", status_code=status.HTTP_302_FOUND
-        )
+        return RedirectResponse(url="/?error=google_auth_failed", status_code=status.HTTP_302_FOUND)
 
     try:
         state_payload = auth_service.validate_oauth_state(state)
@@ -116,9 +113,7 @@ async def google_callback(
             db, code=code, redirect_uri=callback_url
         )
     except Exception as exc:
-        logger.exception(
-            "Google OAuth code exchange failed (callback_url=%s): %s", callback_url, exc
-        )
+        logger.exception("Google OAuth code exchange failed (callback_url=%s)", callback_url)
         return RedirectResponse(
             url=f"/?error={quote(f'google_exchange_failed: {exc}')}",
             status_code=status.HTTP_302_FOUND,

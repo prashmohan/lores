@@ -68,6 +68,89 @@ export const tokenStorage = {
   },
 };
 
+export function formatSanitizedErrorDetail(
+  errorData: unknown,
+  status: number,
+  statusText: string
+): string {
+  const genericServerError = 'An unexpected error occurred while processing your request';
+
+  if (typeof errorData === 'object' && errorData !== null) {
+    if ('detail' in errorData) {
+      const detail = (errorData as { detail: unknown }).detail;
+
+      // 1. Array of validation errors (Pydantic / FastAPI 422)
+      if (Array.isArray(detail)) {
+        const formatted = detail
+          .map((err) => {
+            if (typeof err === 'object' && err !== null) {
+              const e = err as { loc?: unknown[]; msg?: string; message?: string };
+              const field = Array.isArray(e.loc) && e.loc.length > 0 ? e.loc.join('.') : '';
+              const msg = e.msg || e.message || 'Invalid value';
+              return field ? `${field}: ${msg}` : msg;
+            }
+            return String(err);
+          })
+          .filter(Boolean);
+
+        if (formatted.length > 0) {
+          return formatted.join('; ');
+        }
+      }
+
+      // 2. String error detail
+      if (typeof detail === 'string' && detail.trim()) {
+        const trimmed = detail.trim();
+        // Check for raw tracebacks, internal database errors, or stack dumps
+        const isTraceback =
+          trimmed.includes('Traceback (most recent call last)') ||
+          trimmed.includes('sqlalchemy.') ||
+          trimmed.includes('File "/') ||
+          trimmed.includes('Internal Server Error') ||
+          (status >= 500 && trimmed.toLowerCase().includes('traceback'));
+
+        if (isTraceback) {
+          return genericServerError;
+        }
+        return trimmed;
+      }
+
+      // 3. Object detail containing message or msg
+      if (typeof detail === 'object' && detail !== null) {
+        const obj = detail as Record<string, unknown>;
+        if (typeof obj.message === 'string' && obj.message.trim()) {
+          return obj.message.trim();
+        }
+        if (typeof obj.msg === 'string' && obj.msg.trim()) {
+          return obj.msg.trim();
+        }
+        if (typeof obj.error === 'string' && obj.error.trim()) {
+          return obj.error.trim();
+        }
+        // Nested internal objects without user-facing message
+        return genericServerError;
+      }
+    }
+
+    // Top-level message or error
+    const topObj = errorData as Record<string, unknown>;
+    if (typeof topObj.message === 'string' && topObj.message.trim()) {
+      return topObj.message.trim();
+    }
+    if (typeof topObj.error === 'string' && topObj.error.trim()) {
+      return topObj.error.trim();
+    }
+  }
+
+  // 4. Default fallback for server errors (5xx)
+  if (status >= 500) {
+    return genericServerError;
+  }
+
+  // 5. Default HTTP status text fallback
+  return `HTTP ${status}: ${statusText}`;
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = tokenStorage.get();
   const headers: Record<string, string> = {
@@ -88,25 +171,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   });
 
   if (!response.ok) {
-    let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
     let errorData: unknown = null;
     try {
       errorData = await response.json();
-      if (typeof errorData === 'object' && errorData !== null) {
-        if ('detail' in errorData) {
-          const detail = (errorData as { detail: unknown }).detail;
-          if (typeof detail === 'string') {
-            errorDetail = detail;
-          } else if (typeof detail === 'object' && detail !== null && 'message' in detail) {
-            errorDetail = (detail as { message: string }).message;
-          } else {
-            errorDetail = JSON.stringify(detail);
-          }
-        }
-      }
     } catch {
       // Response wasn't json
     }
+    const errorDetail = formatSanitizedErrorDetail(errorData, response.status, response.statusText);
     throw new ApiError(response.status, errorDetail, errorData);
   }
 
@@ -129,25 +200,13 @@ async function requestBlob(endpoint: string, options: RequestInit = {}): Promise
   });
 
   if (!response.ok) {
-    let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
     let errorData: unknown = null;
     try {
       errorData = await response.json();
-      if (typeof errorData === 'object' && errorData !== null) {
-        if ('detail' in errorData) {
-          const detail = (errorData as { detail: unknown }).detail;
-          if (typeof detail === 'string') {
-            errorDetail = detail;
-          } else if (typeof detail === 'object' && detail !== null && 'message' in detail) {
-            errorDetail = (detail as { message: string }).message;
-          } else {
-            errorDetail = JSON.stringify(detail);
-          }
-        }
-      }
     } catch {
       // Response wasn't json
     }
+    const errorDetail = formatSanitizedErrorDetail(errorData, response.status, response.statusText);
     throw new ApiError(response.status, errorDetail, errorData);
   }
 

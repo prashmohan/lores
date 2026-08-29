@@ -228,34 +228,57 @@ export const App: React.FC = () => {
     }
   }, [initWorkspaceTree]);
 
-  // Check auth state on mount and inspect URL query parameters
+  // Check auth state on mount and inspect URL query parameters & hash fragment
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.search) {
-      const params = new URLSearchParams(window.location.search);
-      const urlToken = params.get('token');
-      const urlError = params.get('error');
-
-      if (urlToken) {
-        tokenStorage.set(urlToken);
-        params.delete('token');
-        const remainingSearch = params.toString() ? `?${params.toString()}` : '';
-        window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
-        loadUserData();
-        return;
+    if (typeof window !== 'undefined') {
+      // Check hash fragment for OAuth session token (#token=...)
+      if (window.location.hash) {
+        const hashRaw = window.location.hash.startsWith('#')
+          ? window.location.hash.substring(1)
+          : window.location.hash;
+        const hashParams = new URLSearchParams(hashRaw);
+        const hashToken = hashParams.get('token');
+        if (hashToken) {
+          tokenStorage.set(hashToken);
+          hashParams.delete('token');
+          const remainingHash = hashParams.toString() ? `#${hashParams.toString()}` : '';
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname + window.location.search + remainingHash
+          );
+          loadUserData();
+          return;
+        }
       }
 
-      if (urlError) {
-        params.delete('error');
-        const remainingSearch = params.toString() ? `?${params.toString()}` : '';
-        window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
-        const decodedError = decodeURIComponent(urlError);
-        setError(
-          decodedError.startsWith('google_auth_failed') ||
-          decodedError.startsWith('invalid_state') ||
-          decodedError.startsWith('google_exchange_failed')
-            ? `Google Sign-In error: ${decodedError}. Please try again or use email.`
-            : decodedError
-        );
+      if (window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const urlToken = params.get('token');
+        const urlError = params.get('error');
+
+        if (urlToken) {
+          tokenStorage.set(urlToken);
+          params.delete('token');
+          const remainingSearch = params.toString() ? `?${params.toString()}` : '';
+          window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
+          loadUserData();
+          return;
+        }
+
+        if (urlError) {
+          params.delete('error');
+          const remainingSearch = params.toString() ? `?${params.toString()}` : '';
+          window.history.replaceState({}, document.title, window.location.pathname + remainingSearch);
+          const decodedError = decodeURIComponent(urlError);
+          setError(
+            decodedError.startsWith('google_auth_failed') ||
+            decodedError.startsWith('invalid_state') ||
+            decodedError.startsWith('google_exchange_failed')
+              ? `Google Sign-In error: ${decodedError}. Please try again or use email.`
+              : decodedError
+          );
+        }
       }
     }
 
@@ -876,14 +899,16 @@ export const App: React.FC = () => {
                 <span>Family Activity</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setIsTrashModalOpen(true)}
-                className="min-h-[44px] px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-rose-50 hover:text-rose-900 border border-slate-200 hover:border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <Trash2 className="w-4 h-4 text-rose-600 stroke-[2.5]" />
-                <span>Family Trash</span>
-              </button>
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => setIsTrashModalOpen(true)}
+                  className="min-h-[44px] px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-rose-50 hover:text-rose-900 border border-slate-200 hover:border-rose-300 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600 stroke-[2.5]" />
+                  <span>Family Trash</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1106,11 +1131,12 @@ export const App: React.FC = () => {
           isOpen={isActivityModalOpen}
           onClose={() => setIsActivityModalOpen(false)}
           workspaceId={currentWorkspace.id}
+          isViewer={isViewer}
         />
       )}
 
       {/* Trash Recovery Modal */}
-      {currentWorkspace && (
+      {currentWorkspace && !isViewer && (
         <TrashCanModal
           isOpen={isTrashModalOpen}
           onClose={() => setIsTrashModalOpen(false)}

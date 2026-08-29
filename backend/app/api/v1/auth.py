@@ -122,9 +122,22 @@ async def google_callback(
     db.commit()
 
     raw_target = str(state_payload.get("target") or "/")
-    target = raw_target if raw_target.startswith("/") and not raw_target.startswith("//") else "/"
-    sep = "&" if "?" in target else "?"
-    frontend_redirect_url = f"{target}{sep}token={session_token}"
+    if (
+        not raw_target.startswith("/")
+        or raw_target.startswith(("//", "/\\", "\\"))
+        or "\\" in raw_target
+        or "://" in raw_target
+        or "\r" in raw_target
+        or "\n" in raw_target
+    ):
+        target = "/"
+    else:
+        target = raw_target
+
+    if "#" in target:
+        frontend_redirect_url = f"{target}&token={session_token}"
+    else:
+        frontend_redirect_url = f"{target}#token={session_token}"
     return RedirectResponse(url=frontend_redirect_url, status_code=status.HTTP_302_FOUND)
 
 
@@ -156,7 +169,15 @@ def request_otp(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    _token, raw_otp = auth_service.request_otp(db, email=req.email, display_name=req.display_name)
+    try:
+        _token, raw_otp = auth_service.request_otp(
+            db, email=req.email, display_name=req.display_name
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(e),
+        ) from e
     db.commit()
 
     # Dispatch verification email in background (via SMTP / Resend or console fallback)
@@ -199,6 +220,9 @@ def get_me(
 
 @router.post("/logout")
 def logout(
-    _current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict[str, str]:
+    auth_service.revoke_user_tokens(db, current_user)
+    db.commit()
     return {"message": "Successfully logged out"}

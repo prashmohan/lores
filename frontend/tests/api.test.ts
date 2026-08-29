@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, tokenStorage, ApiError } from '../src/lib/api';
+import { api, tokenStorage, ApiError, formatSanitizedErrorDetail } from '../src/lib/api';
 import type { ImportSummaryRead } from '../src/types/api';
 
 describe('api.dataExchange', () => {
@@ -314,5 +314,57 @@ describe('api.auth extensions', () => {
     );
     expect(res.access_token).toBe('google_jwt_token');
     expect(tokenStorage.get()).toBe('google_jwt_token');
+  });
+});
+
+describe('formatSanitizedErrorDetail and request error sanitization', () => {
+  it('formats array of Pydantic validation errors cleanly', () => {
+    const errorData = {
+      detail: [
+        { loc: ['body', 'email'], msg: 'value is not a valid email address' },
+        { loc: ['body', 'password'], msg: 'String should have at least 8 characters' },
+      ],
+    };
+    const formatted = formatSanitizedErrorDetail(errorData, 422, 'Unprocessable Entity');
+    expect(formatted).toBe(
+      'body.email: value is not a valid email address; body.password: String should have at least 8 characters'
+    );
+  });
+
+  it('sanitizes raw Python traceback strings into generic user-friendly message', () => {
+    const tracebackData = {
+      detail:
+        'Traceback (most recent call last):\n  File "/app/main.py", line 42, in endpoint\n    raise ZeroDivisionError()',
+    };
+    const formatted = formatSanitizedErrorDetail(tracebackData, 500, 'Internal Server Error');
+    expect(formatted).toBe('An unexpected error occurred while processing your request');
+  });
+
+  it('sanitizes nested internal objects without clean message into generic message', () => {
+    const internalObj = {
+      detail: {
+        raw_sql: 'SELECT * FROM users WHERE secret_token = ...',
+        driver_code: 1045,
+      },
+    };
+    const formatted = formatSanitizedErrorDetail(internalObj, 500, 'Internal Server Error');
+    expect(formatted).toBe('An unexpected error occurred while processing your request');
+  });
+
+  it('preserves clean user-facing string messages', () => {
+    const safeError = { detail: 'Workspace not found or access denied' };
+    const formatted = formatSanitizedErrorDetail(safeError, 404, 'Not Found');
+    expect(formatted).toBe('Workspace not found or access denied');
+  });
+
+  it('extracts message property from detail object when provided', () => {
+    const msgObj = { detail: { message: 'Conflict: person was modified concurrently' } };
+    const formatted = formatSanitizedErrorDetail(msgObj, 409, 'Conflict');
+    expect(formatted).toBe('Conflict: person was modified concurrently');
+  });
+
+  it('provides safe generic message on 500 server error when no payload is returned', () => {
+    const formatted = formatSanitizedErrorDetail(null, 500, 'Internal Server Error');
+    expect(formatted).toBe('An unexpected error occurred while processing your request');
   });
 });

@@ -1,9 +1,17 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 from jose import jwt  # type: ignore[import-untyped]
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.config import get_settings
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.models.user import MagicAuthToken
 from app.schemas.auth import (
     OTPRequest,
     OTPResponse,
@@ -16,6 +24,7 @@ from app.services.auth_service import (
     decode_token,
     generate_numeric_otp,
     request_otp,
+    revoke_user_tokens,
     verify_otp,
 )
 
@@ -162,6 +171,10 @@ def test_request_new_otp_invalidates_prior_pending_otp(db_session):
     token1, otp1 = request_otp(db_session, email=email, display_name="Grandpa Joe")
     db_session.commit()
 
+    # Simulate 65 seconds passed so the second request passes the cooldown check
+    token1.created_at = datetime.now(UTC) - timedelta(seconds=65)
+    db_session.commit()
+
     token2, otp2 = request_otp(db_session, email=email, display_name="Grandpa Joe")
     db_session.commit()
 
@@ -236,3 +249,135 @@ def test_google_client_secret_setting(monkeypatch):
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret-12345")
     settings_with_secret = Settings(_env_file=None)
     assert settings_with_secret.GOOGLE_CLIENT_SECRET == "test-secret-12345"
+
+
+def test_request_otp_cooldown_rate_limit(db_session):
+    email = "rapid_requester@example.com"
+    _token1, _otp1 = request_otp(db_session, email=email, display_name="Rapid User")
+    db_session.commit()
+
+    # Consecutive request within 60 seconds raises ValueError
+    with pytest.raises(ValueError, match="Please wait 60 seconds before requesting another OTP."):
+        request_otp(db_session, email=email, display_name="Rapid User")
+
+
+def test_api_request_otp_rate_limiting_429():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as c:
+        # First request succeeds with 200
+        res1 = c.post(
+            "/api/v1/auth/request-otp",
+            json={"email": "cooldown_test@example.com", "display_name": "Cooldown Tester"},
+        )
+        assert res1.status_code == 200
+
+        # Rapid consecutive request returns 429 Too Many Requests
+        res2 = c.post(
+            "/api/v1/auth/request-otp",
+            json={"email": "cooldown_test@example.com", "display_name": "Cooldown Tester"},
+        )
+        assert res2.status_code == 429
+        assert "Please wait 60 seconds" in res2.json()["detail"]
+
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)
+
+
+def test_token_version_and_token_revocation():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    with TestClient(app) as c:
+        db = TestingSessionLocal()
+        _tok, otp = request_otp(db, email="revokeme@example.com", display_name="Revoke Me")
+        db.commit()
+
+        user, token = verify_otp(db, email="revokeme@example.com", code=otp)
+        db.commit()
+
+        # Check payload contains token_version
+        payload = decode_token(token)
+        assert payload.get("token_version") == 1
+        assert user.token_version == 1
+
+        # Access protected endpoint succeeds
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = c.get("/api/v1/auth/me", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["email"] == "revokeme@example.com"
+
+        # Revoke user tokens by incrementing token_version
+        revoke_user_tokens(db, user)
+        db.commit()
+        assert user.token_version == 2
+
+        # Access with old token fails with 401 Unauthorized
+        resp_revoked = c.get("/api/v1/auth/me", headers=headers)
+        assert resp_revoked.status_code == 401
+        assert resp_revoked.json()["detail"] == "Token has been revoked or expired"
+
+        # Simulate cooldown passed for next login
+        tokens = db.query(MagicAuthToken).filter_by(email="revokeme@example.com").all()
+        for t in tokens:
+            t.created_at = datetime.now(UTC) - timedelta(seconds=70)
+        db.commit()
+
+        # New login generates token with updated token_version == 2 and succeeds
+        _tok2, otp2 = request_otp(db, email="revokeme@example.com", display_name="Revoke Me")
+        db.commit()
+        _user2, new_token = verify_otp(db, email="revokeme@example.com", code=otp2)
+        db.commit()
+
+        new_payload = decode_token(new_token)
+        assert new_payload.get("token_version") == 2
+
+        resp_new = c.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"})
+        assert resp_new.status_code == 200
+        assert resp_new.json()["email"] == "revokeme@example.com"
+
+        # Calling logout endpoint revokes the token
+        logout_resp = c.post(
+            "/api/v1/auth/logout", headers={"Authorization": f"Bearer {new_token}"}
+        )
+        assert logout_resp.status_code == 200
+        assert logout_resp.json()["message"] == "Successfully logged out"
+
+        # After logout, the token is now revoked
+        resp_after_logout = c.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"}
+        )
+        assert resp_after_logout.status_code == 401
+        assert resp_after_logout.json()["detail"] == "Token has been revoked or expired"
+
+        db.close()
+
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)

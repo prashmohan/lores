@@ -30,7 +30,11 @@ def list_people(
     if role == "viewer":
         return [
             PersonRead.model_validate(p).model_copy(
-                update={"birth_date": None, "birth_place": None}
+                update={
+                    "birth_date": None,
+                    "birth_place": None,
+                    "biography": "[Redacted for privacy]" if p.biography else None,
+                }
             )
             if p.is_living
             else PersonRead.model_validate(p)
@@ -68,7 +72,11 @@ def get_person(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
     if role == "viewer" and person.is_living:
         return PersonRead.model_validate(person).model_copy(
-            update={"birth_date": None, "birth_place": None}
+            update={
+                "birth_date": None,
+                "birth_place": None,
+                "biography": "[Redacted for privacy]" if person.biography else None,
+            }
         )
     return person
 

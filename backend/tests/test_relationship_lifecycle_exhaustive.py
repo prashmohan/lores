@@ -217,18 +217,19 @@ def test_soft_delete_both_parents_sequentially_then_restore_one(
     db_session.commit()
     assert len(tree_service.get_focus_neighborhood(db_session, ws.id, child.id)["parents"]) == 0
 
-    # Restore Mother -> Mother is back as parent
+    # Restore Mother -> Mother restored, but joint union remains inactive while Father is in trash
     lore_service.restore_from_trash(db_session, ws.id, "Person", mother.id, actor)
     db_session.commit()
     child_neigh = tree_service.get_focus_neighborhood(db_session, ws.id, child.id)
-    assert len(child_neigh["parents"]) == 1
-    assert child_neigh["parents"][0]["id"] == str(mother.id)
+    assert len(child_neigh["parents"]) == 0
 
-    # Restore Father -> Both parents back
+    # Restore Father -> Both parents active, joint union reactivated
     lore_service.restore_from_trash(db_session, ws.id, "Person", father.id, actor)
     db_session.commit()
     child_neigh_both = tree_service.get_focus_neighborhood(db_session, ws.id, child.id)
     assert len(child_neigh_both["parents"]) == 2
+    parent_ids = {p["id"] for p in child_neigh_both["parents"]}
+    assert parent_ids == {str(father.id), str(mother.id)}
 
 
 def test_purge_both_parents_cleans_up_union_and_child_links(db_session: Session, lifecycle_setup):

@@ -44,6 +44,22 @@ def request_otp(
     clean_email = email.lower().strip()
     now = datetime.now(UTC)
 
+    # 1. Cooldown rate limiting: check if an OTP was created for this email in the last 60 seconds
+    recent_token_stmt = (
+        select(MagicAuthToken)
+        .where(MagicAuthToken.email == clean_email)
+        .order_by(MagicAuthToken.created_at.desc())
+    )
+    recent_token = db.scalars(recent_token_stmt).first()
+    if recent_token and recent_token.created_at:
+        created_at = (
+            recent_token.created_at
+            if recent_token.created_at.tzinfo
+            else recent_token.created_at.replace(tzinfo=UTC)
+        )
+        if (now - created_at).total_seconds() < 60:
+            raise ValueError("Please wait 60 seconds before requesting another OTP.")
+
     # Invalidate all active/pending tokens for this email so only the newly generated OTP is valid
     active_tokens_stmt = select(MagicAuthToken).where(
         MagicAuthToken.email == clean_email,
@@ -140,7 +156,13 @@ def verify_otp(db: Session, email: str, code: str) -> tuple[User, str]:
 
     user.last_login_at = now
     db.flush()
-    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+    jwt_token = create_access_token(
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "token_version": user.token_version,
+        }
+    )
     return user, jwt_token
 
 
@@ -246,8 +268,20 @@ def verify_google_id_token(
     user.last_login_at = now
     db.flush()
 
-    jwt_token = create_access_token({"sub": str(user.id), "email": user.email})
+    jwt_token = create_access_token(
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "token_version": user.token_version,
+        }
+    )
     return user, jwt_token
+
+
+def revoke_user_tokens(db: Session, user: User) -> None:
+    """Revoke all active JWT tokens for the given user by incrementing token_version."""
+    user.token_version = (user.token_version or 1) + 1
+    db.flush()
 
 
 def generate_oauth_state(redirect_target: str = "/") -> str:

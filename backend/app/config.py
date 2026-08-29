@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +33,17 @@ class Settings(BaseSettings):
     # Google OAuth / SSO Settings
     GOOGLE_CLIENT_ID: str | None = None
     GOOGLE_CLIENT_SECRET: str | None = None
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if self.ENVIRONMENT == "production" and (
+            len(self.JWT_SECRET) < 32
+            or self.JWT_SECRET == "lores-dev-secret-key-change-in-production-32bytes-min"
+        ):
+            raise ValueError(
+                "JWT_SECRET must be at least 32 characters and cannot use default dev placeholder in production"
+            )
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

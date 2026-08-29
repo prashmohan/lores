@@ -195,7 +195,7 @@ def test_person_cascade_soft_delete_and_restore(db_session):
     assert union.is_deleted is True
     assert rel.is_deleted is True
 
-    # Restore father (union and child relationship reactivated)
+    # Restore father (union and child relationship remain inactive while mother is in trash)
     restore_from_trash(db_session, workspace_id, "Person", father.id, actor)
     db_session.commit()
 
@@ -203,6 +203,17 @@ def test_person_cascade_soft_delete_and_restore(db_session):
     db_session.refresh(union)
     db_session.refresh(rel)
     assert father.is_deleted is False
+    assert union.is_deleted is True
+    assert rel.is_deleted is True
+
+    # Restore mother (both partners now active, union and child relationship reactivated)
+    restore_from_trash(db_session, workspace_id, "Person", mother.id, actor)
+    db_session.commit()
+
+    db_session.refresh(mother)
+    db_session.refresh(union)
+    db_session.refresh(rel)
+    assert mother.is_deleted is False
     assert union.is_deleted is False
     assert rel.is_deleted is False
 
@@ -356,3 +367,111 @@ def test_purge_trash_cascades_active_lore_notes_for_soft_deleted_person(db_sessi
     assert purged_count >= 1
     assert db_session.get(Person, person.id) is None
     assert db_session.get(LoreNote, lore.id) is None
+
+
+def test_purge_trash_multi_tenant_isolation(db_session):
+    ws1_id, actor1 = _setup_workspace_and_actor(db_session)
+    ws2_id, actor2 = _setup_workspace_and_actor(db_session)
+
+    # Workspace 1: person and lore note
+    p1 = Person(workspace_id=ws1_id, first_name="Alice", last_name="Tenant1")
+    db_session.add(p1)
+    db_session.commit()
+    lore1 = create_lore(
+        db_session,
+        workspace_id=ws1_id,
+        person_id=p1.id,
+        title="WS1 Note",
+        content="WS1 content",
+        actor=actor1,
+    )
+    db_session.commit()
+
+    # Workspace 2: person and lore note
+    p2 = Person(workspace_id=ws2_id, first_name="Bob", last_name="Tenant2")
+    db_session.add(p2)
+    db_session.commit()
+    lore2 = create_lore(
+        db_session,
+        workspace_id=ws2_id,
+        person_id=p2.id,
+        title="WS2 Note",
+        content="WS2 content",
+        actor=actor2,
+    )
+    db_session.commit()
+
+    # Soft delete p1 in ws1
+    soft_delete_person(db_session, ws1_id, p1.id, actor1)
+    db_session.commit()
+
+    # Purge trash in ws1
+    purge_trash(db_session, ws1_id, actor1)
+    db_session.commit()
+
+    # WS1 entities should be purged
+    assert db_session.get(Person, p1.id) is None
+    assert db_session.get(LoreNote, lore1.id) is None
+
+    # WS2 entities must remain completely intact
+    assert db_session.get(Person, p2.id) is not None
+    assert db_session.get(LoreNote, lore2.id) is not None
+    assert db_session.get(LoreNote, lore2.id).content == "WS2 content"
+
+
+def test_restore_person_with_partner_in_trash_keeps_union_inactive_until_partner_restored(
+    db_session,
+):
+    workspace_id, actor = _setup_workspace_and_actor(db_session)
+
+    partner_a = Person(workspace_id=workspace_id, first_name="Partner", last_name="A")
+    partner_b = Person(workspace_id=workspace_id, first_name="Partner", last_name="B")
+    child = Person(workspace_id=workspace_id, first_name="Child", last_name="AB")
+    db_session.add_all([partner_a, partner_b, child])
+    db_session.flush()
+
+    union = FamilyUnion(
+        workspace_id=workspace_id, partner1_id=partner_a.id, partner2_id=partner_b.id
+    )
+    db_session.add(union)
+    db_session.flush()
+
+    rel = ChildRelationship(workspace_id=workspace_id, union_id=union.id, child_id=child.id)
+    db_session.add(rel)
+    db_session.commit()
+
+    # Soft delete both partners
+    soft_delete_person(db_session, workspace_id, partner_a.id, actor)
+    soft_delete_person(db_session, workspace_id, partner_b.id, actor)
+    db_session.commit()
+
+    db_session.refresh(union)
+    db_session.refresh(rel)
+    assert union.is_deleted is True
+    assert rel.is_deleted is True
+
+    # Restore Partner A while Partner B is still in trash
+    restore_from_trash(db_session, workspace_id, "Person", partner_a.id, actor)
+    db_session.commit()
+
+    db_session.refresh(partner_a)
+    db_session.refresh(partner_b)
+    db_session.refresh(union)
+    db_session.refresh(rel)
+    assert partner_a.is_deleted is False
+    assert partner_b.is_deleted is True
+    # Joint union and child relationship remain deleted
+    assert union.is_deleted is True
+    assert rel.is_deleted is True
+
+    # Now restore Partner B
+    restore_from_trash(db_session, workspace_id, "Person", partner_b.id, actor)
+    db_session.commit()
+
+    db_session.refresh(partner_b)
+    db_session.refresh(union)
+    db_session.refresh(rel)
+    assert partner_b.is_deleted is False
+    # Now both partners are active, union and child rel are reactivated
+    assert union.is_deleted is False
+    assert rel.is_deleted is False

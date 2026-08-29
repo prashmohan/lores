@@ -138,4 +138,95 @@ describe('ActivityFeedModal', () => {
 
     expect(screen.queryByText(/Family Activity Feed/i)).not.toBeInTheDocument();
   });
+
+  it('redacts living individual sensitive details in changes diff when isViewer is true', async () => {
+    const livingLog: AuditLogRead[] = [
+      {
+        id: 'log-living',
+        workspace_id: 'ws-1',
+        actor_id: 'user-1',
+        actor_name: 'Arthur Miller',
+        actor_email: 'arthur@example.com',
+        entity_type: 'person',
+        entity_id: 'person-living',
+        action: 'update',
+        changes: {
+          first_name: 'Margaret',
+          birth_date: { old: '1942-01-01', new: '1942-05-15' },
+          birth_place: 'Chicago, IL',
+          biography: 'Private biographical lore',
+          is_living: true,
+        },
+        created_at: '2026-08-23T08:20:00Z',
+      },
+    ];
+
+    vi.spyOn(api.trash, 'getAuditLogs').mockResolvedValue(livingLog);
+
+    render(
+      <ActivityFeedModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        isViewer={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/View Changes/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/View Changes/i));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/1942-01-01/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Chicago, IL/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Private biographical lore/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/"first_name": "Margaret"/i)).toBeInTheDocument();
+    });
+  });
+
+  it('does not redact details for deceased individuals when isViewer is true', async () => {
+    const deceasedLog: AuditLogRead[] = [
+      {
+        id: 'log-deceased',
+        workspace_id: 'ws-1',
+        actor_id: 'user-1',
+        actor_name: 'Arthur Miller',
+        actor_email: 'arthur@example.com',
+        entity_type: 'person',
+        entity_id: 'person-deceased',
+        action: 'update',
+        changes: {
+          first_name: 'Benjamin',
+          birth_date: '1890-04-12',
+          death_date: '1965-11-20',
+          is_living: false,
+        },
+        created_at: '2026-08-23T08:25:00Z',
+      },
+    ];
+
+    vi.spyOn(api.trash, 'getAuditLogs').mockResolvedValue(deceasedLog);
+
+    render(
+      <ActivityFeedModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws-1"
+        isViewer={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/View Changes/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/View Changes/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/1890-04-12/i)).toBeInTheDocument();
+      expect(screen.getByText(/1965-11-20/i)).toBeInTheDocument();
+    });
+  });
 });

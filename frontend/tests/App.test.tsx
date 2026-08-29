@@ -277,6 +277,30 @@ describe('App navigation and modals', () => {
       );
     });
   });
+
+  it('hides Family Trash button and prevents opening trash modal when workspace role is viewer', async () => {
+    const viewerWorkspaces: UserWorkspaceMembership[] = [
+      {
+        workspace: {
+          id: 'ws-1',
+          name: "Miller's Family Tree",
+          slug: 'millers-family-tree',
+          description: 'Family tree',
+          created_by_user_id: 'user-2',
+          created_at: '2026-08-23T00:00:00Z',
+          updated_at: '2026-08-23T00:00:00Z',
+        },
+        role: 'viewer',
+      },
+    ];
+    vi.spyOn(api.workspaces, 'list').mockResolvedValue(viewerWorkspaces);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Family Activity/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Family Trash/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /Family Trash/i })).not.toBeInTheDocument();
+    });
+  });
 });
-
-

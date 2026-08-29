@@ -33,6 +33,21 @@ def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
             )
+
+        # Validate token version for token revocation support
+        token_version = payload.get("token_version")
+        if token_version is not None:
+            if token_version != user.token_version:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked or expired",
+                )
+        elif user.token_version != 1:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has been revoked or expired",
+            )
+
         return user
     except HTTPException:
         raise

@@ -10,6 +10,7 @@ from app.services.auth_service import (
     decode_token,
     generate_numeric_otp,
     request_otp,
+    revoke_user_tokens,
     verify_otp,
 )
 from app.services.cycle_service import (
@@ -99,6 +100,7 @@ __all__ = [
     "remove_member",
     "request_otp",
     "restore_from_trash",
+    "revoke_user_tokens",
     "serialize_person",
     "soft_delete_lore",
     "soft_delete_person",

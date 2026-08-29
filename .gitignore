@@ -44,6 +44,7 @@ blob-report/
 *.sarif
 scan-reports/
 
-# Agent skills
+# Agent skills and temporary runs
 !.agent/
 !.agent/skills/
+.agents/

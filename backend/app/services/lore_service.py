@@ -315,6 +315,15 @@ def restore_from_trash(
             (FamilyUnion.partner1_id == entity_id) | (FamilyUnion.partner2_id == entity_id),
         )
         for union in db.scalars(union_stmt).all():
+            other_partner_id = (
+                union.partner2_id if union.partner1_id == entity_id else union.partner1_id
+            )
+            if other_partner_id is not None:
+                other_partner = db.get(Person, other_partner_id)
+                if other_partner is not None and other_partner.is_deleted:
+                    # Partner is still deleted: keep joint union and its child links inactive
+                    continue
+
             union.is_deleted = False
             union.deleted_at = None
 
@@ -328,15 +337,20 @@ def restore_from_trash(
 
         # Validate graph invariants for all reactivated relationships
         for rel in db.scalars(ch_stmt).all():
-            validate_no_cycle(db, workspace_id, rel.union_id, entity_id)
+            if not rel.is_deleted:
+                rel_union = db.get(FamilyUnion, rel.union_id)
+                if rel_union and not rel_union.is_deleted:
+                    validate_no_cycle(db, workspace_id, rel.union_id, entity_id)
 
         for union in db.scalars(union_stmt).all():
-            union_ch_stmt = select(ChildRelationship).where(
-                ChildRelationship.workspace_id == workspace_id,
-                ChildRelationship.union_id == union.id,
-            )
-            for u_rel in db.scalars(union_ch_stmt).all():
-                validate_no_cycle(db, workspace_id, u_rel.union_id, u_rel.child_id)
+            if not union.is_deleted:
+                union_ch_stmt = select(ChildRelationship).where(
+                    ChildRelationship.workspace_id == workspace_id,
+                    ChildRelationship.union_id == union.id,
+                    ChildRelationship.is_deleted.is_(False),
+                )
+                for u_rel in db.scalars(union_ch_stmt).all():
+                    validate_no_cycle(db, workspace_id, u_rel.union_id, u_rel.child_id)
 
         record_audit_event(
             db,
@@ -427,6 +441,7 @@ def purge_trash(
         person_lores = list(
             db.scalars(
                 select(LoreNote).where(
+                    LoreNote.workspace_id == workspace_id,
                     LoreNote.person_id == p.id,
                 )
             ).all()

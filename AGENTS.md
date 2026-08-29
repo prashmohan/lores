@@ -122,3 +122,46 @@ npm run test:e2e:a11y
 - **Accessible Feedback & Progressive Haptics (WCAG 4.1.3 Level AA)**: Floating guidance hints or status changes must use `role="status"`, `aria-live="polite"`, and `pointer-events-none`. Haptic feedback (`navigator.vibrate`) must be wrapped in progressive enhancement (`navigator.vibrate?.(...)`) and gracefully no-op when unsupported.
 
 
+---
+
+## 6. Secure Development & Defensive Architecture Standards
+
+All contributors and automated agents must adhere to the following core security principles across all backend, frontend, database, and infrastructure code:
+
+### 6.1 Strict Tenant Isolation & Data Scoping (OWASP A01: Broken Access Control)
+- **Zero-Trust Query Scoping**: Every database query, update, deletion, and aggregation affecting tenant or workspace-owned entities MUST explicitly scope against the authenticated tenant context (e.g. `workspace_id == workspace_id`).
+- **Cascade & Bulk Operation Safety**: Bulk actions, background tasks, and cascade operations must explicitly enforce tenant boundaries at every query layer rather than assuming parent scoping propagates implicitly.
+- **Hierarchical Permission Enforcement**: Validate actor permissions on every state-mutating operation against the least-privilege matrix (`owner`, `admin`, `collaborator`, `viewer`). Reject unauthorized modifications with explicit authorization errors before executing business logic.
+
+### 6.2 Authentication, Cryptography & Token Management (OWASP A02 & A07)
+- **Production Secret Rigor**: Environment configurations must enforce strong, cryptographically secure secrets in production environments, strictly failing fast on startup if secrets fall below required entropy thresholds (e.g. $\ge 256$ bits / 32 bytes) or use development fallback defaults.
+- **Secure Token Lifecycle & Transport**:
+  - Never transmit credentials, bearer tokens, or sensitive session identifiers in URL query parameters, unencrypted URLs, or server-logged vectors. Prefer secure `HttpOnly`, `SameSite`, `Secure` cookies or ephemeral URL fragments (`#...`) with immediate history cleanup.
+  - Implement active revocation mechanisms (e.g., token versioning or invalidation stores) so credential changes, logouts, or privilege revocations take effect immediately across all sessions.
+- **Abuse Prevention & Rate Limiting**: All unauthenticated or public-facing authentication endpoints (e.g., OTP requests, password resets, login attempts) must enforce rate limiting, request throttling, and progressive delays to prevent brute-force attacks, email flooding, and resource exhaustion.
+- **Timing Attack Resistance**: Authentication comparisons (such as token hashes, HMACs, or verification codes) must use constant-time comparison algorithms to prevent side-channel timing analysis.
+
+### 6.3 Data Privacy, Redaction & Information Leakage Prevention
+- **Privacy by Default**: Sensitive personal identifying information (PII) of living individuals or restricted records must be filtered or redacted at the service/API serialization boundary based on the requester's role and relationship clearance.
+- **Audit Log Sanitization**: Activity feeds, change histories, and audit records must sanitize and redact sensitive PII before persisting or presenting change diffs to users without appropriate clearance.
+- **Interface Privilege Filtering**: Destructive management controls, administrative features, and sensitive configuration interfaces must be hidden and disabled in client applications for roles lacking authorization, backed by strict server-side authorization enforcement.
+
+### 6.4 Defensive Input Validation & Schema Integrity (OWASP A03: Injection)
+- **Positive Validation (Allow-Listing)**: All incoming payloads must be strictly validated against typed request schemas enforcing explicit string length limits, numeric ranges, allowed enum values, and structural boundaries.
+- **Safe URI & Resource Handling**: Validate all user-supplied URLs against allowed schemes (`http`, `https`, safe relative paths) and reject dangerous URI schemes (`javascript:`, arbitrary data schemes) to prevent Cross-Site Scripting (XSS).
+- **Parameterized Queries & Dialect-Safe DDL**: All database interactions must use parameterized statements or ORM abstractions. When constructing dynamic database identifiers or migrations, use dialect-aware identifier escaping/quoting and strict alphanumeric whitelist validation.
+- **Bounded Resource Consumption (DoS Prevention)**: Endpoints accepting file uploads or batch data imports must enforce bounded stream processing (e.g., chunked buffer consumption) with strict payload size caps, preventing unconstrained memory allocation and event-loop starvation.
+
+### 6.5 Centralized Error Handling & Failure Transparency
+- **Safe Failure Modes**: Never leak internal implementation details, raw SQL syntax, database schema layouts, or unhandled language stack traces to client responses.
+- **Centralized Exception Interception**: Register global application exception handlers to log comprehensive debugging details server-side while returning standardized, clean JSON error responses to clients.
+- **Client-Side Message Sanitization**: Client applications and HTTP layers must format validation feedback into human-readable messages while gracefully suppressing internal server traces.
+
+### 6.6 Domain Invariant & Graph Integrity Protection
+- **Relational Invariant Verification**: Multi-entity mutations, restorations, and relationship graphs must validate structural invariants (e.g., preventing cycles, acyclic graph violations, or activating child links when parent entities remain in inactive/deleted states).
+- **Idempotency & Optimistic Concurrency**: Concurrent entity updates should leverage versioning or timestamp checks (`If-Unmodified-Since`) to detect conflicts and avoid lost updates.
+
+### 6.7 Network, Transport & Edge Security (OWASP A05: Security Misconfiguration)
+- **Defensive HTTP Headers**: Enforce strict edge security headers across all responses: `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy`.
+- **Trusted Reverse Proxy Configuration**: When operating behind a reverse proxy or load balancer, configure trusted IP forwarding using standard proxy headers (`X-Forwarded-For`, `X-Real-IP`) and validate upstream proxy sources to prevent client IP spoofing.
+

@@ -1,16 +1,56 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_workspace_role, require_role
 from app.db.session import get_db
+from app.models.lore import LoreNote
+from app.models.person import Person
 from app.models.user import User
 from app.schemas.lore import LoreNoteCreate, LoreNoteRead, LoreNoteUpdate
 from app.services import lore_service
 
 router = APIRouter()
+
+
+@router.get("", response_model=list[LoreNoteRead])
+@router.get("/", response_model=list[LoreNoteRead], include_in_schema=False)
+def list_lore_notes(
+    workspace_id: uuid.UUID,
+    person_id: uuid.UUID | None = Query(None),
+    role: str = Depends(get_workspace_role),
+    db: Session = Depends(get_db),
+) -> Any:
+    if person_id:
+        notes = lore_service.get_lore_for_person(db, workspace_id=workspace_id, person_id=person_id)
+    else:
+        stmt = (
+            select(LoreNote)
+            .where(
+                LoreNote.workspace_id == workspace_id,
+                LoreNote.is_deleted.is_(False),
+            )
+            .order_by(LoreNote.event_year.desc().nullslast(), LoreNote.created_at.desc())
+        )
+        notes = list(db.scalars(stmt).all())
+
+    if role == "viewer":
+        redacted_notes = []
+        for note in notes:
+            person = db.get(Person, note.person_id)
+            if person and person.is_living:
+                redacted_notes.append(
+                    LoreNoteRead.model_validate(note).model_copy(
+                        update={"content": "[Redacted for privacy]"}
+                    )
+                )
+            else:
+                redacted_notes.append(LoreNoteRead.model_validate(note))
+        return redacted_notes
+    return notes
 
 
 @router.post("", response_model=LoreNoteRead)
@@ -50,22 +90,38 @@ def create_lore(
 def get_lore_for_person(
     workspace_id: uuid.UUID,
     person_id: uuid.UUID,
-    _role: str = Depends(get_workspace_role),
+    role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
-    return lore_service.get_lore_for_person(db, workspace_id=workspace_id, person_id=person_id)
+    notes = lore_service.get_lore_for_person(db, workspace_id=workspace_id, person_id=person_id)
+    if role == "viewer":
+        person = db.get(Person, person_id)
+        if person and person.is_living:
+            return [
+                LoreNoteRead.model_validate(note).model_copy(
+                    update={"content": "[Redacted for privacy]"}
+                )
+                for note in notes
+            ]
+    return notes
 
 
 @router.get("/{lore_id}", response_model=LoreNoteRead)
 def get_lore(
     workspace_id: uuid.UUID,
     lore_id: uuid.UUID,
-    _role: str = Depends(get_workspace_role),
+    role: str = Depends(get_workspace_role),
     db: Session = Depends(get_db),
 ) -> Any:
     lore = lore_service.get_lore_by_id(db, workspace_id=workspace_id, lore_id=lore_id)
     if not lore:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lore note not found")
+    if role == "viewer":
+        person = db.get(Person, lore.person_id)
+        if person and person.is_living:
+            return LoreNoteRead.model_validate(lore).model_copy(
+                update={"content": "[Redacted for privacy]"}
+            )
     return lore
 
 

@@ -15,6 +15,36 @@ from app.services import data_exchange_service, gedcom_service
 router = APIRouter()
 
 MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25 MB maximum upload limit
+CHUNK_SIZE = 64 * 1024  # 64 KB chunks
+
+
+async def _read_file_bounded(
+    file: UploadFile,
+    max_size: int = MAX_UPLOAD_SIZE,
+    file_type_label: str = "",
+) -> bytes:
+    """
+    Reads an UploadFile in chunks up to max_size.
+    Raises HTTPException 413 immediately if total bytes exceed max_size,
+    preventing unbounded memory consumption.
+    """
+    chunks: list[bytes] = []
+    total_bytes = 0
+
+    while True:
+        chunk = await file.read(CHUNK_SIZE)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > max_size:
+            label = f" {file_type_label}" if file_type_label else ""
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Uploaded{label} file exceeds maximum size of 25MB",
+            )
+        chunks.append(chunk)
+
+    return b"".join(chunks)
 
 
 def _sanitize_filename(name: str) -> str:
@@ -80,12 +110,7 @@ async def import_gedcom(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file uploaded")
 
     try:
-        raw_bytes = await file.read(MAX_UPLOAD_SIZE + 1)
-        if len(raw_bytes) > MAX_UPLOAD_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="Uploaded GEDCOM file exceeds maximum size of 25MB",
-            )
+        raw_bytes = await _read_file_bounded(file, MAX_UPLOAD_SIZE, file_type_label="GEDCOM")
     except HTTPException:
         raise
     except Exception as e:
@@ -138,12 +163,7 @@ async def import_json(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No file uploaded")
 
     try:
-        raw_bytes = await file.read(MAX_UPLOAD_SIZE + 1)
-        if len(raw_bytes) > MAX_UPLOAD_SIZE:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="Uploaded JSON file exceeds maximum size of 25MB",
-            )
+        raw_bytes = await _read_file_bounded(file, MAX_UPLOAD_SIZE, file_type_label="JSON")
     except HTTPException:
         raise
     except Exception as e:

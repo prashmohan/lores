@@ -8,12 +8,76 @@ interface ActivityFeedModalProps {
   isOpen: boolean;
   onClose: () => void;
   workspaceId: string;
+  isViewer?: boolean;
 }
+
+export const redactAuditChanges = (
+  changes: Record<string, unknown> | null | undefined,
+  isViewer: boolean
+): Record<string, unknown> | null | undefined => {
+  if (!isViewer || !changes) return changes;
+
+  // If explicitly marked not living (deceased), birth/death dates are historical
+  const isLiving =
+    changes.is_living !== false &&
+    (typeof changes.is_living === 'object' && changes.is_living !== null
+      ? (changes.is_living as { new?: boolean }).new !== false
+      : true);
+
+  if (!isLiving) {
+    return changes;
+  }
+
+  const sensitiveKeys = new Set([
+    'birth_date',
+    'birth_place',
+    'biography',
+    'bio',
+    'notes',
+    'phone',
+    'email',
+    'ssn',
+  ]);
+
+  const redactValue = (val: unknown): unknown => {
+    if (val === null || val === undefined) return val;
+    if (typeof val === 'object' && !Array.isArray(val)) {
+      const obj = val as Record<string, unknown>;
+      if ('old' in obj || 'new' in obj) {
+        return {
+          ...obj,
+          old: obj.old ? '[Redacted for privacy]' : obj.old,
+          new: obj.new ? '[Redacted for privacy]' : obj.new,
+        };
+      }
+      const cleaned: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(obj)) {
+        cleaned[k] = sensitiveKeys.has(k.toLowerCase()) ? redactValue(v) : v;
+      }
+      return cleaned;
+    }
+    return '[Redacted for privacy]';
+  };
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(changes)) {
+    if (sensitiveKeys.has(key.toLowerCase())) {
+      sanitized[key] = redactValue(value);
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      sanitized[key] = redactValue(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+
+  return sanitized;
+};
 
 export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
   isOpen,
   onClose,
   workspaceId,
+  isViewer = false,
 }) => {
   const [logs, setLogs] = useState<AuditLogRead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -255,7 +319,8 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
             {logs.map((log) => {
               const badge = getActionBadge(log.action);
               const isExpanded = expandedLogId === log.id;
-              const hasChanges = log.changes && Object.keys(log.changes).length > 0;
+              const sanitizedChanges = redactAuditChanges(log.changes, isViewer);
+              const hasChanges = sanitizedChanges && Object.keys(sanitizedChanges).length > 0;
 
               return (
                 <div
@@ -301,7 +366,7 @@ export const ActivityFeedModal: React.FC<ActivityFeedModalProps> = ({
 
                   {isExpanded && hasChanges && (
                     <div className="mt-2 p-3 bg-slate-900 text-slate-100 rounded-xl text-xs font-mono overflow-x-auto">
-                      <pre>{JSON.stringify(log.changes, null, 2)}</pre>
+                      <pre>{JSON.stringify(sanitizedChanges, null, 2)}</pre>
                     </div>
                   )}
                 </div>

@@ -511,7 +511,7 @@ def test_api_google_callback_success_default_target(client):
             follow_redirects=False,
         )
         assert response.status_code == 302
-        assert response.headers["location"] == "/?token=mock_jwt_session_token_123"
+        assert response.headers["location"] == "/#token=mock_jwt_session_token_123"
 
 
 def test_api_google_callback_success_custom_target_with_query_params(client):
@@ -531,8 +531,38 @@ def test_api_google_callback_success_custom_target_with_query_params(client):
         assert response.status_code == 302
         assert (
             response.headers["location"]
-            == "/workspace/123/tree?focus=456&token=mock_jwt_session_token_xyz"
+            == "/workspace/123/tree?focus=456#token=mock_jwt_session_token_xyz"
         )
+
+
+@pytest.mark.parametrize(
+    "malicious_target",
+    [
+        "//evil.com",
+        "\\\\evil.com",
+        "/\\evil.com",
+        "https://attacker.com/steal",
+        "javascript:alert(1)",
+        "//evil.com/callback",
+        "/valid\r\nHeader-Injection: 1",
+    ],
+)
+def test_api_google_callback_sanitizes_malicious_redirect_target(client, malicious_target):
+    valid_state = generate_oauth_state(malicious_target)
+    mock_user = User(email="callback_user@example.com", display_name="Callback User")
+    mock_user.id = "user-12345"
+
+    with patch(
+        "app.services.auth_service.exchange_google_code_for_user",
+        new_callable=AsyncMock,
+        return_value=(mock_user, "mock_token_abc"),
+    ):
+        response = client.get(
+            f"/api/v1/auth/google/callback?code=valid_code&state={valid_state}",
+            follow_redirects=False,
+        )
+        assert response.status_code == 302
+        assert response.headers["location"] == "/#token=mock_token_abc"
 
 
 def test_verify_google_token_payload_with_at_hash_claim():
